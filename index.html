@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Tax Planner (Detailed Calc)</title>
+    <title>Smart Tax Planner</title>
     
     <!-- Google Fonts: Prompt -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -101,6 +101,7 @@
         const IconTrash = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
         const IconWheelchair = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="6" r="2"></circle><path d="M8 20a6 6 0 0 1-6-6c0-2.8 2-5 4.5-5.5"></path><path d="M13 10h4"></path><path d="M10 11v6"></path><path d="M15 15v5h4"></path><path d="M10 6h4l3 9"></path></svg>;
         const IconAlertCircle = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
+        const IconBadgeCheck = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>;
         
         // --- Clean Components ---
         const CleanCard = ({ children, className = "" }) => (
@@ -119,7 +120,7 @@
             };
 
             return (
-                <div className="mb-6">
+                <div className="mb-6 w-full">
                     <label className="block text-[15px] font-semibold text-slate-700 mb-2 flex items-center">
                         {IconComponent && <IconComponent className="w-5 h-5 mr-2 text-indigo-500" />}
                         {label}
@@ -147,7 +148,7 @@
         };
 
         const App = () => {
-            const STORAGE_KEY = 'taxMastery_detailed_local';
+            const STORAGE_KEY = 'taxMastery_PND90_local';
 
             // Local Save States
             const [savedPlans, setSavedPlans] = useState([]);
@@ -162,7 +163,10 @@
             // Data States
             const [salary, setSalary] = useState('');
             const [bonus, setBonus] = useState('');
+            
             const [otherIncome, setOtherIncome] = useState('');
+            const [otherIncomeType, setOtherIncomeType] = useState('402'); // PND 90 Specific state
+            
             const [withheldTax, setWithheldTax] = useState('');
             
             const [status, setStatus] = useState('single');
@@ -206,14 +210,14 @@
 
             // --- Save Logic (Local Storage) ---
             const getFormData = () => ({
-                salary, bonus, otherIncome, withheldTax, status, children, children2018, 
+                salary, bonus, otherIncome, otherIncomeType, withheldTax, status, children, children2018, 
                 parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, 
                 providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, 
                 shoppingStimulus, doubleDonations, donations
             });
 
             const handleClearData = () => {
-                setSalary(''); setBonus(''); setOtherIncome(''); setWithheldTax('');
+                setSalary(''); setBonus(''); setOtherIncome(''); setOtherIncomeType('402'); setWithheldTax('');
                 setStatus('single'); setChildren(''); setChildren2018('');
                 setParents(''); setParentsHealthInsurance(''); setDisabledPersons('');
                 setSocialSecurity(''); setLifeInsurance(''); setHealthInsurance('');
@@ -252,7 +256,7 @@
 
             const loadPlan = (plan) => {
                 const d = plan.data || {};
-                setSalary(d.salary || ''); setBonus(d.bonus || ''); setOtherIncome(d.otherIncome || ''); setWithheldTax(d.withheldTax || '');
+                setSalary(d.salary || ''); setBonus(d.bonus || ''); setOtherIncome(d.otherIncome || ''); setOtherIncomeType(d.otherIncomeType || '402'); setWithheldTax(d.withheldTax || '');
                 setStatus(d.status || 'single'); setChildren(d.children || ''); setChildren2018(d.children2018 || '');
                 setParents(d.parents || ''); setParentsHealthInsurance(d.parentsHealthInsurance || ''); setDisabledPersons(d.disabledPersons || '');
                 setSocialSecurity(d.socialSecurity || ''); setLifeInsurance(d.lifeInsurance || ''); setHealthInsurance(d.healthInsurance || '');
@@ -275,17 +279,43 @@
                 }
             };
 
-            // --- Tax Calculation Engine ---
+            // --- Tax Calculation Engine (PND 90 Accurate) ---
             const calculateTaxForData = (data) => {
                 const safeNum = (val) => Number(val) || 0;
                 
+                // 1. Income
                 const salaryAnnual = safeNum(data.salary) * 12;
                 const bonusValue = safeNum(data.bonus);
+                const income401 = salaryAnnual + bonusValue;
                 const otherIncomeValue = safeNum(data.otherIncome);
-                const totalIncome = salaryAnnual + bonusValue + otherIncomeValue;
+                const type = data.otherIncomeType || '402';
                 
-                const expenses = Math.min(totalIncome * 0.5, 100000);
+                const totalIncome = income401 + otherIncomeValue;
+                
+                // 2. Expenses (PND 90 vs 91 logic)
+                let expenses = 0;
+                let expenseBreakdownStr = "";
+                
+                if (type === '402') {
+                    // 40(1) + 40(2) max 50%, capped at 100,000
+                    expenses = Math.min((income401 + otherIncomeValue) * 0.5, 100000);
+                    expenseBreakdownStr = "หักเหมา 50% ของรายได้ทั้งหมด (สูงสุดไม่เกิน 100,000 บาท)";
+                } else if (type === '408') {
+                    // 40(1) max 50% capped at 100,000
+                    const exp401 = Math.min(income401 * 0.5, 100000);
+                    // 40(8) commercial flat 60% (unlimited)
+                    const exp408 = otherIncomeValue * 0.60;
+                    expenses = exp401 + exp408;
+                    expenseBreakdownStr = `เงินเดือนหักเหมา (${formatMoney(exp401)}) + ธุรกิจหักเหมา 60% (${formatMoney(exp408)})`;
+                } else if (type === '405') {
+                    const exp401 = Math.min(income401 * 0.5, 100000);
+                    // 40(5) rental flat 30% (assuming property)
+                    const exp405 = otherIncomeValue * 0.30;
+                    expenses = exp401 + exp405;
+                    expenseBreakdownStr = `เงินเดือนหักเหมา (${formatMoney(exp401)}) + ค่าเช่าหักเหมา 30% (${formatMoney(exp405)})`;
+                }
 
+                // 3. Allowances
                 let personalAllowance = data.status === 'married_no_income' ? 120000 : 60000;
                 let familyAllowance = (safeNum(data.children) * 30000) + (safeNum(data.children2018) * 60000) + 
                                       (Math.min(safeNum(data.parents), 4) * 30000) + Math.min(safeNum(data.parentsHealthInsurance), 15000) + 
@@ -313,6 +343,7 @@
 
                 const preDonAllowance = personalAllowance + familyAllowance + socialSec + genLifeUsed + retireGroup + tesgActual + realEstateStimulus;
 
+                // 4. Donations
                 let netForDon = Math.max(0, totalIncome - expenses - preDonAllowance);
 
                 const doubleDon = Math.min(safeNum(data.doubleDonations) * 2, netForDon * 0.10);
@@ -323,6 +354,7 @@
                 let netIncome = Math.max(0, netAfterDoubleDon - genDon);
                 const totalAllowances = preDonAllowance + doubleDon + genDon;
 
+                // 5. Brackets
                 const brackets = [
                     { m: 0, r: 0 }, { m: 150000, r: 0.05 }, { m: 300000, r: 0.10 }, { m: 500000, r: 0.15 },
                     { m: 750000, r: 0.20 }, { m: 1000000, r: 0.25 }, { m: 2000000, r: 0.30 }, { m: 5000000, r: 0.35 }
@@ -343,7 +375,7 @@
 
                         if (taxableInBracket > 0) {
                             bracketDetails.push({
-                                label: b.m === 0 ? '0 - 150,000 (ยกเว้น)' : `${formatMoney(b.m + 1)} - ${nextM === Infinity ? 'ขึ้นไป' : formatMoney(nextM)} (${b.r * 100}%)`,
+                                label: b.m === 0 ? '0 - 150,000 (ยกเว้น)' : `${formatMoney(b.m + 1)} - ${nextM === Infinity ? 'ขึ้นไป' : formatMoney(nextM)}`,
                                 taxable: taxableInBracket,
                                 tax: taxInBracket,
                                 rate: b.r * 100
@@ -360,13 +392,13 @@
                     currentBracketRate: brackets[currentBracketIndex].r * 100,
                     currentBracketMin: brackets[currentBracketIndex].m,
                     totalDonationAllowance,
-                    breakdown: { expenses, personalAllowance, familyAllowance, socialSec, genLifeUsed, retireGroup, tesgActual, realEstateStimulus, doubleDon, genDon, bracketDetails, wht: safeNum(data.withheldTax) }
+                    breakdown: { expenses, expenseBreakdownStr, personalAllowance, familyAllowance, socialSec, genLifeUsed, retireGroup, tesgActual, realEstateStimulus, doubleDon, genDon, bracketDetails, wht: safeNum(data.withheldTax) }
                 };
             };
 
             const calculation = useMemo(() => {
                 const safeNum = (val) => Number(val) || 0;
-                const currentData = { salary, bonus, otherIncome, withheldTax, status, children, children2018, parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, shoppingStimulus, doubleDonations, donations };
+                const currentData = { salary, bonus, otherIncome, otherIncomeType, withheldTax, status, children, children2018, parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, shoppingStimulus, doubleDonations, donations };
                 
                 const currentCalc = calculateTaxForData(currentData);
                 
@@ -406,8 +438,7 @@
                     lowestPossibleTax, maxPotentialTaxSavings, investmentNeeded,
                     caps: { life: maxLifeAvailable, retire: remainingRetirementCapacity, tesg: remainingTesg }
                 };
-            }, [salary, bonus, otherIncome, withheldTax, status, children, children2018, parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, shoppingStimulus, doubleDonations, donations]);
-
+            }, [salary, bonus, otherIncome, otherIncomeType, withheldTax, status, children, children2018, parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, shoppingStimulus, doubleDonations, donations]);
 
             return (
                 <div className="max-w-md md:max-w-[1200px] mx-auto pt-8 px-4 md:px-6 space-y-8 relative">
@@ -447,8 +478,10 @@
                                 <IconWallet className="w-8 h-8" />
                             </div>
                             <div>
-                                <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Tax Planner</h1>
-                                <p className="text-slate-500 text-[15px] mt-1 font-medium">โปรแกรมวางแผนภาษีส่วนบุคคล ภ.ง.ด.1 ฉบับเข้าใจง่าย</p>
+                                <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Tax Planner (ภ.ง.ด.90/91)</h1>
+                                <p className="text-slate-500 text-[15px] mt-1 font-medium flex items-center justify-center sm:justify-start">
+                                    <IconBadgeCheck className="w-4 h-4 mr-1 text-emerald-500" /> อัปเดตตรรกะหักค่าใช้จ่าย ภ.ง.ด.90 แล้ว
+                                </p>
                             </div>
                         </div>
                         
@@ -468,14 +501,42 @@
                             <CleanCard>
                                 <h2 className="text-lg font-bold mb-6 text-slate-800 flex items-center pb-4 border-b border-slate-100">
                                     <span className="bg-blue-50 text-blue-500 p-1.5 rounded-lg mr-3"><IconWallet className="w-5 h-5" /></span>
-                                    1. รายได้และภาษี
+                                    1. หมวดรายได้ (เงินได้พึงประเมิน)
                                 </h2>
-                                <NumberInput label="เงินเดือน (ต่อเดือน)" value={salary} onChange={setSalary} maxNote="กรอกยอดเงินเดือนที่ได้รับต่อเดือน ระบบจะนำไปคูณ 12 เดือนให้อัตโนมัติเพื่อคำนวณเป็นรายได้รวมทั้งปี" />
-                                <NumberInput label="โบนัส (ทั้งปี)" value={bonus} onChange={setBonus} maxNote="กรอกยอดเงินโบนัสทั้งหมดที่คุณได้รับ หรือคาดว่าจะได้รับรวมกันตลอดทั้งปีภาษี" />
-                                <NumberInput label="รายได้อื่นๆ (ทั้งปี)" value={otherIncome} onChange={setOtherIncome} maxNote="กรอกรายได้เสริมอื่นๆ เช่น ค่าคอมมิชชัน, ฟรีแลนซ์, หรือรายได้จากการขายของออนไลน์รวมตลอดทั้งปี" />
-                                <div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 mt-6 relative overflow-hidden">
+                                
+                                <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100 mb-6">
+                                    <h3 className="font-bold text-blue-800 mb-4 text-sm uppercase tracking-widest">รายได้จากงานประจำ 40(1)</h3>
+                                    <NumberInput label="เงินเดือน (ยอดต่อเดือน)" value={salary} onChange={setSalary} maxNote="ระบบจะนำไปคูณ 12 เดือนให้อัตโนมัติ" />
+                                    <NumberInput label="โบนัส (ยอดรวมทั้งปี)" value={bonus} onChange={setBonus} />
+                                </div>
+
+                                <div className="bg-amber-50/30 p-5 rounded-2xl border border-amber-100 mb-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold text-amber-800 text-sm uppercase tracking-widest">รายได้อื่นๆ (ภ.ง.ด.90)</h3>
+                                    </div>
+                                    <div className="mb-4">
+                                        <label className="block text-[14px] font-semibold text-slate-700 mb-2">ประเภทของรายได้อื่นๆ</label>
+                                        <div className="relative">
+                                            <select 
+                                                className="w-full p-3.5 bg-white border border-amber-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none cursor-pointer"
+                                                value={otherIncomeType}
+                                                onChange={(e) => setOtherIncomeType(e.target.value)}
+                                            >
+                                                <option value="402">40(2) ฟรีแลนซ์, รับจ้างอิสระ, ค่านายหน้า (หักค่าใช้จ่าย 50%)</option>
+                                                <option value="408">40(8) ขายของออนไลน์, ธุรกิจส่วนตัว (หักค่าใช้จ่ายเหมา 60%)</option>
+                                                <option value="405">40(5) ค่าเช่าทรัพย์สิน/บ้าน/คอนโด (หักค่าใช้จ่ายเหมา 30%)</option>
+                                            </select>
+                                            <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-amber-500">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <NumberInput label="ยอดรายได้อื่นๆ รวมทั้งปี" value={otherIncome} onChange={setOtherIncome} maxNote="ระบบจะคำนวณหักค่าใช้จ่ายให้อัตโนมัติตามประเภทรายได้ที่คุณเลือก" />
+                                </div>
+
+                                <div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 relative overflow-hidden">
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-300"></div>
-                                    <NumberInput label="ภาษีที่ถูกหัก ณ ที่จ่ายแล้ว" value={withheldTax} onChange={setWithheldTax} icon={IconAlertCircle} maxNote="ภาษีที่บริษัทหักนำส่งกรมสรรพากรไปแล้วล่วงหน้า (ดูได้จากสลิปเงินเดือนหรือใบ 50 ทวิ) ระบบจะนำไปหักลบเพื่อสรุปว่าต้องจ่ายเพิ่มหรือจะได้ขอเงินคืน" />
+                                    <NumberInput label="ภาษีที่ถูกหัก ณ ที่จ่ายแล้ว" value={withheldTax} onChange={setWithheldTax} icon={IconAlertCircle} maxNote="ยอดรวมภาษีที่ถูกหักนำส่งกรมสรรพากรไปแล้วล่วงหน้า (ดูได้จากใบ 50 ทวิ)" />
                                 </div>
                             </CleanCard>
 
@@ -630,7 +691,7 @@
                                 <div className="flex justify-between items-center bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 mt-4">
                                     <div>
                                         <span className="font-bold text-indigo-900 block text-lg">เงินได้สุทธิ</span>
-                                        <span className="text-xs text-indigo-600/70 font-medium">ยอดนี้คือนำไปเข้าตารางคำนวณขั้นบันได</span>
+                                        <span className="text-xs text-indigo-600/70 font-medium">ยอดนี้นำไปคำนวณขั้นบันไดภาษี</span>
                                     </div>
                                     <span className="font-bold text-2xl text-indigo-700">{formatMoney(calculation.netIncome)}</span>
                                 </div>
@@ -718,19 +779,22 @@
                                 
                                 <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center">
                                     <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 mr-3"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-                                    รายละเอียดการคำนวณ
+                                    รายละเอียดการคำนวณ ภ.ง.ด.90/91
                                 </h3>
 
                                 <div className="space-y-4">
                                     {/* Step 1 & 2 */}
                                     <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
                                         <div className="flex justify-between font-bold text-slate-800 mb-3">
-                                            <span>1. รายได้รวมทั้งปี</span>
+                                            <span>1. เงินได้พึงประเมินทั้งหมด</span>
                                             <span>{formatMoney(calculation.totalIncome)}</span>
                                         </div>
-                                        <div className="flex justify-between font-bold text-rose-500 text-[15px]">
-                                            <span>2. หัก ค่าใช้จ่าย (50% ไม่เกิน 1 แสน)</span>
+                                        <div className="flex justify-between font-bold text-rose-500 text-[15px] mb-2">
+                                            <span>2. หัก ค่าใช้จ่ายตามประเภทรายได้</span>
                                             <span>-{formatMoney(calculation.breakdown.expenses)}</span>
+                                        </div>
+                                        <div className="text-sm text-slate-500 ml-4 font-medium">
+                                            ↳ {calculation.breakdown.expenseBreakdownStr}
                                         </div>
                                     </div>
 
