@@ -24,6 +24,9 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Chart.js สำหรับทำ Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         body {
             font-family: 'Prompt', sans-serif;
@@ -69,7 +72,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useMemo, useEffect } = React;
+        const { useState, useMemo, useEffect, useRef } = React;
 
         // --- Error Boundary ---
         class ErrorBoundary extends React.Component {
@@ -106,7 +109,154 @@
         const IconWheelchair = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="6" r="2"></circle><path d="M8 20a6 6 0 0 1-6-6c0-2.8 2-5 4.5-5.5"></path><path d="M13 10h4"></path><path d="M10 11v6"></path><path d="M15 15v5h4"></path><path d="M10 6h4l3 9"></path></svg>;
         const IconAlertCircle = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
         const IconBadgeCheck = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>;
-        
+        const IconLightbulb = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>;
+
+        const formatMoney = (val) => {
+            if (isNaN(val) || val === undefined || val === null) return "0";
+            return Math.round(val).toLocaleString('en-US');
+        };
+
+        // 1. กราฟโดนัท แสดงสัดส่วนรายได้ vs ค่าใช้จ่าย vs ลดหย่อน
+        const IncomeDonutChart = ({ totalIncome, expenses, allowances, netIncome }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                // แก้ไขปัญหา: ตรวจสอบความพร้อมของ Canvas เสมอก่อนเรียกใช้
+                if (!chartRef.current) return;
+                const ctx = chartRef.current.getContext('2d');
+                if (!ctx) return;
+
+                // ป้องกันกราฟเพี้ยนกรณีที่ค่าเกิน totalIncome (ปรับให้กราฟสมดุล)
+                const cExp = Math.min(expenses, totalIncome);
+                const cAll = Math.min(allowances, totalIncome - cExp);
+                const cNet = Math.max(0, totalIncome - cExp - cAll);
+
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+                
+                chartInstance.current = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['หักค่าใช้จ่าย', 'ค่าลดหย่อน', 'เงินได้สุทธิ'],
+                        datasets: [{
+                            data: [cExp, cAll, cNet],
+                            backgroundColor: ['#f43f5e', '#10b981', '#6366f1'],
+                            borderWidth: 0,
+                            hoverOffset: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                titleFont: { family: 'Prompt' },
+                                bodyFont: { family: 'Prompt' },
+                                callbacks: {
+                                    label: (context) => ` ${context.label}: ${context.raw.toLocaleString()} บาท`
+                                }
+                            }
+                        }
+                    }
+                });
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, [totalIncome, expenses, allowances, netIncome]);
+
+            if(totalIncome === 0) return null; // ไม่แสดงถ้ารายได้เป็น 0
+
+            return (
+                <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 mt-4 mb-4 fade-in">
+                    <h4 className="text-center font-semibold text-slate-700 text-sm mb-4">สัดส่วนรายได้ของคุณ</h4>
+                    <div className="relative w-40 h-40 mx-auto">
+                        <canvas ref={chartRef}></canvas>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-[10px] text-slate-500 font-medium">รายได้รวม</span>
+                            <span className="text-sm font-bold text-slate-800">{formatMoney(totalIncome)}</span>
+                        </div>
+                    </div>
+                    {/* Custom Legend */}
+                    <div className="flex flex-col space-y-2.5 mt-5 text-[13px]">
+                        <div className="flex justify-between items-center"><span className="flex items-center text-slate-600"><span className="w-3 h-3 rounded-full bg-[#f43f5e] mr-2"></span>หักค่าใช้จ่าย</span><span className="font-semibold text-slate-800">{formatMoney(expenses)}</span></div>
+                        <div className="flex justify-between items-center"><span className="flex items-center text-slate-600"><span className="w-3 h-3 rounded-full bg-[#10b981] mr-2"></span>ค่าลดหย่อน</span><span className="font-semibold text-slate-800">{formatMoney(allowances)}</span></div>
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-200"><span className="flex items-center font-bold text-indigo-900"><span className="w-3 h-3 rounded-full bg-[#6366f1] mr-2"></span>เงินได้สุทธิ</span><span className="font-bold text-indigo-600">{formatMoney(netIncome)}</span></div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 2. กราฟแท่ง แสดงภาษีแต่ละขั้นบันได
+        const TaxBracketBarChart = ({ bracketDetails }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                // แก้ไขปัญหา: ตรวจสอบความพร้อมของ Canvas
+                if (!chartRef.current) return;
+                const ctx = chartRef.current.getContext('2d');
+                if (!ctx) return;
+                
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+                if(bracketDetails.length === 0) return;
+
+                chartInstance.current = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: bracketDetails.map(b => `อัตรา ${b.rate}%`),
+                        datasets: [{
+                            label: 'ภาษีที่ต้องเสียในขั้นนี้ (บาท)',
+                            data: bracketDetails.map(b => b.tax),
+                            backgroundColor: bracketDetails.map(b => b.rate === 0 ? '#10b981' : '#f43f5e'),
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                titleFont: { family: 'Prompt' },
+                                bodyFont: { family: 'Prompt' },
+                                callbacks: {
+                                    label: (context) => ` เสียภาษี: ${context.raw.toLocaleString()} บาท`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true, 
+                                grid: { color: '#f1f5f9' },
+                                ticks: { font: { family: 'Prompt' } }
+                            },
+                            x: { 
+                                grid: { display: false },
+                                ticks: { font: { family: 'Prompt' } }
+                            }
+                        }
+                    }
+                });
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, [bracketDetails]);
+
+            if(bracketDetails.length === 0) return null;
+
+            return (
+                <div className="w-full h-56 mt-6 mb-4 fade-in">
+                    <canvas ref={chartRef}></canvas>
+                </div>
+            );
+        };
+
         // --- Clean Components ---
         const CleanCard = ({ children, className = "" }) => (
             <div className={`glass-card rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-8 ${className} fade-in`}>
@@ -146,11 +296,6 @@
             );
         };
 
-        const formatMoney = (val) => {
-            if (isNaN(val) || val === undefined || val === null) return "0";
-            return Math.round(val).toLocaleString('en-US');
-        };
-
         const App = () => {
             const STORAGE_KEY = 'taxMastery_PND90_local';
 
@@ -163,6 +308,7 @@
             const [showClearConfirm, setShowClearConfirm] = useState(false);
             const [showMaxSavingDetails, setShowMaxSavingDetails] = useState(false);
             const [showBreakdown, setShowBreakdown] = useState(false);
+            const [showPresetConfirm, setShowPresetConfirm] = useState({ show: false, type: null });
 
             // Data States
             const [salary, setSalary] = useState('');
@@ -209,7 +355,50 @@
             // --- Notification Helper ---
             const showNotificationMsg = (msg) => {
                 setNotification(msg);
-                setTimeout(() => setNotification(''), 3000);
+                setTimeout(() => setNotification(''), 3500);
+            };
+
+            // --- Smart Presets (โปรไฟล์จำลอง) ---
+            const applyPreset = (presetType) => {
+                // Clear old data safely first
+                setSalary(''); setBonus(''); setOtherIncome(''); setWithheldTax('');
+                setStatus('single'); setChildren(''); setChildren2018(''); setParents(''); setParentsHealthInsurance(''); setDisabledPersons('');
+                setSocialSecurity(''); setLifeInsurance(''); setHealthInsurance(''); setProvidentFund(''); setSsf(''); setRmf(''); setPensionInsurance(''); setTesg('');
+                setMortgageInterest(''); setShoppingStimulus(''); setDoubleDonations(''); setDonations('');
+                
+                if (presetType === 'salary_basic') {
+                    setSalary(45000); 
+                    setBonus(45000); 
+                    setSocialSecurity(9000);
+                    showNotificationMsg("🌟 โหลดโปรไฟล์: มนุษย์เงินเดือนทั่วไป สำเร็จ!");
+                } else if (presetType === 'salary_pro') {
+                    setSalary(120000); 
+                    setBonus(240000); 
+                    setSocialSecurity(9000); 
+                    setProvidentFund(120000); 
+                    setLifeInsurance(100000);
+                    setSsf(100000);
+                    setRmf(150000);
+                    setMortgageInterest(55000);
+                    showNotificationMsg("🚀 โหลดโปรไฟล์: สายเปย์ลดหย่อน (รายได้สูง) สำเร็จ!");
+                } else if (presetType === 'freelance') {
+                    setOtherIncomeType('402');
+                    setOtherIncome(900000);
+                    setLifeInsurance(50000);
+                    setHealthInsurance(25000);
+                    showNotificationMsg("💻 โหลดโปรไฟล์: ฟรีแลนซ์/รับจ้างอิสระ สำเร็จ!");
+                }
+                setShowPresetConfirm({ show: false, type: null });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const triggerPreset = (presetType) => {
+                // Check if user already typed something substantial
+                if (salary !== '' || otherIncome !== '' || lifeInsurance !== '') {
+                    setShowPresetConfirm({ show: true, type: presetType });
+                } else {
+                    applyPreset(presetType);
+                }
             };
 
             // --- Save Logic (Local Storage) ---
@@ -388,6 +577,26 @@
                     }
                 }
 
+                // --- 🚀 NEW FEATURE: Next Bracket Alert Calculation ---
+                const thresholds = [
+                    { t: 150000, r: 5 }, { t: 300000, r: 10 }, { t: 500000, r: 15 },
+                    { t: 750000, r: 20 }, { t: 1000000, r: 25 }, { t: 2000000, r: 30 }, { t: 5000000, r: 35 }
+                ];
+                let nextBracketDist = null;
+                let nextBracketRateAlert = null;
+
+                for (let b of thresholds) {
+                    // Find the next bracket they haven't crossed yet
+                    if (netIncome < b.t) {
+                        nextBracketDist = b.t - netIncome;
+                        nextBracketRateAlert = b.r;
+                        break; // Found the immediate next hurdle
+                    }
+                }
+
+                // Effective Tax Rate (%)
+                const effectiveTaxRate = (totalIncome > 0) ? ((tax / totalIncome) * 100).toFixed(2) : 0;
+
                 return { 
                     tax, totalIncome, totalAllowances, netIncome,
                     lifeAndHealthUsed: genLifeUsed, 
@@ -395,6 +604,7 @@
                     retirementGroup: retireGroup, 
                     currentBracketRate: brackets[currentBracketIndex].r * 100,
                     currentBracketMin: brackets[currentBracketIndex].m,
+                    nextBracketDist, nextBracketRateAlert, effectiveTaxRate,
                     totalDonationAllowance,
                     breakdown: { expenses, expenseBreakdownStr, personalAllowance, familyAllowance, socialSec, genLifeUsed, retireGroup, tesgActual, realEstateStimulus, doubleDon, genDon, bracketDetails, wht: safeNum(data.withheldTax) }
                 };
@@ -455,6 +665,25 @@
                         </div>
                     )}
 
+                    {/* Modal Confirm Preset Load */}
+                    {showPresetConfirm.show && (
+                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[250] flex items-center justify-center p-4 fade-in">
+                            <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl">
+                                <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5">
+                                    <IconLightbulb className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-bold text-center text-slate-800 mb-2">เขียนทับข้อมูลเดิม?</h3>
+                                <p className="text-center text-slate-500 text-[15px] mb-8 leading-relaxed">
+                                    คุณมีข้อมูลกรอกค้างไว้อยู่ การโหลดโปรไฟล์จำลองจะ <strong>ล้างข้อมูลปัจจุบัน</strong> และแทนที่ด้วยข้อมูลจำลองทั้งหมด
+                                </p>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setShowPresetConfirm({show: false, type: null})} className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">ยกเลิก</button>
+                                    <button onClick={() => applyPreset(showPresetConfirm.type)} className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-colors shadow-md shadow-indigo-200">ดำเนินการต่อ</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Modal Confirm Clear Data */}
                     {showClearConfirm && (
                         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4 fade-in">
@@ -499,8 +728,27 @@
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                         
                         {/* LEFT COLUMN: Inputs */}
-                        <div className="lg:col-span-7 space-y-8">
+                        <div className="lg:col-span-7 space-y-6">
                             
+                            {/* --- 🚀 NEW FEATURE: Smart Presets Menu --- */}
+                            <div className="bg-white p-5 md:p-6 rounded-3xl border border-indigo-100 shadow-[0_4px_20px_-4px_rgba(79,70,229,0.1)]">
+                                <h3 className="text-[15px] font-bold text-indigo-900 mb-3 flex items-center">
+                                    <IconLightbulb className="w-5 h-5 mr-2 text-amber-500" /> 
+                                    ลองกรอกข้อมูลด้วยโปรไฟล์จำลอง (ช่วยให้เห็นภาพง่ายขึ้น)
+                                </h3>
+                                <div className="flex flex-wrap gap-2.5">
+                                    <button onClick={() => triggerPreset('salary_basic')} className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-xl transition-colors border border-indigo-200">
+                                        💼 มนุษย์เงินเดือน (ทั่วไป)
+                                    </button>
+                                    <button onClick={() => triggerPreset('salary_pro')} className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm font-semibold rounded-xl transition-colors border border-emerald-200">
+                                        📈 สายเปย์ลดหย่อนจัดเต็ม
+                                    </button>
+                                    <button onClick={() => triggerPreset('freelance')} className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm font-semibold rounded-xl transition-colors border border-rose-200">
+                                        💻 ฟรีแลนซ์ / รับจ้าง
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* 1. Income */}
                             <CleanCard>
                                 <h2 className="text-lg font-bold mb-6 text-slate-800 flex items-center pb-4 border-b border-slate-100">
@@ -660,11 +908,19 @@
                                     <p className="font-semibold text-white/90 text-[15px] mb-3 flex items-center">
                                         {calculation.isRefund ? '🎉 ยินดีด้วย! จะได้เงินคืนภาษี' : (calculation.taxDifference > 0 ? '⚠️ ระวัง! คุณต้องจ่ายภาษีเพิ่ม' : 'ยอดภาษีสุทธิที่ต้องชำระ')}
                                     </p>
-                                    <h2 className="text-5xl md:text-[4rem] font-bold tracking-tight text-white mb-3">
+                                    <h2 className="text-5xl md:text-[4rem] font-bold tracking-tight text-white mb-2">
                                         {formatMoney(calculation.taxDifference)}
                                     </h2>
+                                    
+                                    {/* --- 🚀 NEW FEATURE: Effective Tax Rate --- */}
+                                    {calculation.totalIncome > 0 && (
+                                        <div className="text-white/70 font-medium text-sm mb-5">
+                                            (คุณจ่ายภาษีคิดเป็น <strong className="text-white bg-white/20 px-2 py-0.5 rounded ml-1">{calculation.effectiveTaxRate}%</strong> ของรายได้รวม)
+                                        </div>
+                                    )}
+
                                     {calculation.tax > 0 && (
-                                        <div className="mt-5 inline-flex items-center bg-white/20 backdrop-blur-sm text-white px-5 py-2 rounded-full font-medium text-sm border border-white/20">
+                                        <div className="mt-1 inline-flex items-center bg-white/20 backdrop-blur-sm text-white px-5 py-2 rounded-full font-medium text-sm border border-white/20">
                                             ฐานภาษีสูงสุดของคุณอยู่ที่: <strong className="ml-1.5 text-base">{calculation.currentBracketRate}%</strong>
                                         </div>
                                     )}
@@ -677,21 +933,18 @@
                                 </div>
                             </div>
 
-                            {/* Basic Breakdown */}
+                            {/* Basic Breakdown & Income Chart */}
                             <CleanCard className="!p-7 space-y-4">
-                                <h3 className="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4">สรุปที่มาของภาษี</h3>
-                                <div className="flex justify-between items-center text-[15px]">
-                                    <span className="text-slate-500">รายได้รวมทั้งปี</span>
-                                    <span className="font-bold text-slate-800">{formatMoney(calculation.totalIncome)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[15px]">
-                                    <span className="text-slate-500">หัก ค่าลดหย่อนส่วนตัวและการลงทุน</span>
-                                    <span className="font-bold text-rose-500">-{formatMoney(calculation.totalAllowances - calculation.totalDonationAllowance)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[15px]">
-                                    <span className="text-slate-500">หัก เงินบริจาค</span>
-                                    <span className="font-bold text-rose-500">-{formatMoney(calculation.totalDonationAllowance)}</span>
-                                </div>
+                                <h3 className="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-2">สรุปที่มาของภาษี</h3>
+                                
+                                {/* 📊 กราฟโดนัท สัดส่วนรายได้แสดงที่นี่ */}
+                                <IncomeDonutChart 
+                                    totalIncome={calculation.totalIncome} 
+                                    expenses={calculation.breakdown.expenses} 
+                                    allowances={calculation.totalAllowances} 
+                                    netIncome={calculation.netIncome} 
+                                />
+
                                 <div className="flex justify-between items-center bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 mt-4">
                                     <div>
                                         <span className="font-bold text-indigo-900 block text-lg">เงินได้สุทธิ</span>
@@ -699,6 +952,20 @@
                                     </div>
                                     <span className="font-bold text-2xl text-indigo-700">{formatMoney(calculation.netIncome)}</span>
                                 </div>
+
+                                {/* --- 🚀 NEW FEATURE: Next Bracket Warning --- */}
+                                {calculation.nextBracketDist !== null && calculation.totalIncome > 0 && (
+                                    <div className="mt-3 mb-2 bg-orange-50 p-4 rounded-xl border border-orange-200/60 flex items-start fade-in">
+                                        <IconAlertCircle className="w-5 h-5 text-orange-500 mr-3 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="text-[13px] font-bold text-orange-800 uppercase tracking-wide mb-1">ระวังฐานภาษีถัดไป</h4>
+                                            <p className="text-sm font-medium text-orange-700/80 leading-relaxed">
+                                                เงินได้สุทธิอีกแค่ <strong className="text-orange-600 font-bold">{formatMoney(calculation.nextBracketDist)} บาท</strong> จะทำให้รายได้ส่วนเกินถูกคิดภาษีอัตรา <strong className="text-orange-600 font-bold">{calculation.nextBracketRateAlert}%</strong>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="pt-6 mt-4 flex justify-between items-center text-[15px]">
                                     <span className="text-slate-500 font-medium">ภาษีที่คำนวณได้ตามกฎหมาย</span>
                                     <span className="font-bold text-slate-800 text-lg">{formatMoney(calculation.tax)}</span>
@@ -828,10 +1095,18 @@
                                         <span className="font-black text-xl text-indigo-600">{formatMoney(calculation.netIncome)}</span>
                                     </div>
 
-                                    {/* Step 5: Tax Bracket Table */}
+                                    {/* Step 5: Tax Bracket Table & Bar Chart */}
                                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                                        <div className="bg-slate-100 p-4 font-bold text-slate-800">5. คำนวณภาษีตามขั้นบันได</div>
-                                        <div className="p-0 overflow-x-auto">
+                                        <div className="bg-slate-100 p-4 font-bold text-slate-800 flex justify-between">
+                                            <span>5. คำนวณภาษีตามขั้นบันได</span>
+                                        </div>
+                                        
+                                        {/* 📊 กราฟแท่ง แสดงการเสียภาษีในแต่ละขั้นบันได */}
+                                        <div className="px-4">
+                                            <TaxBracketBarChart bracketDetails={calculation.breakdown.bracketDetails} />
+                                        </div>
+
+                                        <div className="p-0 overflow-x-auto border-t border-slate-100">
                                             <table className="w-full text-[14px] text-left text-slate-600 min-w-[400px]">
                                                 <thead className="bg-slate-50 text-xs uppercase border-b border-slate-200">
                                                     <tr>
