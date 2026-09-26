@@ -492,7 +492,7 @@
                     genLifeUsed += Math.min(pensionExcess, 100000 - genLifeUsed);
                 }
                 
-                const pvdActual = Math.min(safeNum(data.providentFund), totalIncome * 0.15, 500000);
+                const pvdActual = Math.min(safeNum(data.providentFund), income401 * 0.15, 500000);
                 const ssfActual = Math.min(safeNum(data.ssf), totalIncome * 0.30, 200000);
                 const rmfActual = Math.min(safeNum(data.rmf), totalIncome * 0.30, 500000);
                 const retireGroup = Math.min(pvdActual + ssfActual + rmfActual + actualPension, 500000);
@@ -546,6 +546,13 @@
                     }
                 }
 
+                // ภาษีขั้นต่ำ ม.48(2): เงินได้นอกจาก 40(1) ตั้งแต่ 120,000 บาท คิด 0.5% ของเงินได้พึงประเมิน
+                // ถ้าเกิน 5,000 บาท และสูงกว่าภาษีอัตราก้าวหน้า ต้องเสียตามวิธีนี้
+                const progressiveTax = tax;
+                const minimumTax = otherIncomeValue >= 120000 ? otherIncomeValue * 0.005 : 0;
+                const minTaxApplied = minimumTax > 5000 && minimumTax > progressiveTax;
+                if (minTaxApplied) tax = minimumTax;
+
                 // Calculate Gap to Next Bracket
                 if (brackets[currentBracketIndex + 1]) {
                     nextBracketGap = brackets[currentBracketIndex + 1].m - netIncome;
@@ -560,7 +567,7 @@
                     lifeAndHealthUsed: genLifeUsed, actualTesg: tesgActual, retirementGroup: retireGroup, 
                     currentBracketRate: brackets[currentBracketIndex].r * 100,
                     totalDonationAllowance,
-                    breakdown: { expenses, expenseBreakdownStr, personalAllowance, familyAllowance, socialSec, genLifeUsed, retireGroup, tesgActual, realEstateStimulus, doubleDon, genDon, bracketDetails, wht: safeNum(data.withheldTax) }
+                    breakdown: { expenses, expenseBreakdownStr, personalAllowance, familyAllowance, socialSec, genLifeUsed, retireGroup, tesgActual, realEstateStimulus, doubleDon, genDon, bracketDetails, progressiveTax, minimumTax, minTaxApplied, wht: safeNum(data.withheldTax) }
                 };
             };
 
@@ -572,7 +579,7 @@
                 
                 const totalIncome = currentCalc.totalIncome;
                 const maxLifeAvailable = 100000 - currentCalc.lifeAndHealthUsed;
-                const pvdActual = Math.min(safeNum(providentFund), totalIncome * 0.15, 500000);
+                const pvdActual = Math.min(safeNum(providentFund), (safeNum(salary) * 12 + safeNum(bonus)) * 0.15, 500000);
                 const pensionActual = Math.min(safeNum(pensionInsurance), totalIncome * 0.15, 200000);
                 const groupUsedBeforeNewFunds = pvdActual + pensionActual;
                 let remainingRetirementCapacity = Math.max(0, 500000 - groupUsedBeforeNewFunds - safeNum(ssf) - safeNum(rmf));
@@ -767,7 +774,7 @@
                                     <p className="text-[11px] sm:text-[12px] text-slate-500 mb-5 sm:mb-7 bg-slate-50 p-2.5 sm:p-3 rounded-lg sm:rounded-xl border border-slate-100 inline-block font-medium">เพดานเงินลงทุนหมวดนี้ทั้งหมดรวมกันต้อง <strong className="text-rose-500">ไม่เกิน 500,000 บาท</strong></p>
                                     
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                        <NumberInput label="PVD / กบข. / กอช." value={providentFund} onChange={setProvidentFund} maxNote="สูงสุดไม่เกิน 15% ของรายได้ทั้งหมด" />
+                                        <NumberInput label="PVD / กบข. / กอช." value={providentFund} onChange={setProvidentFund} maxNote="สูงสุดไม่เกิน 15% ของค่าจ้าง (เงินเดือน+โบนัส) และไม่เกิน 500,000 บาท" />
                                         <NumberInput label="เบี้ยประกันชีวิตแบบบำนาญ" value={pensionInsurance} onChange={setPensionInsurance} maxNote="สูงสุดไม่เกิน 15% ของรายได้ และไม่เกิน 200,000 บาท" />
                                         <NumberInput label="กองทุน SSF" value={ssf} onChange={setSsf} maxNote="สูงสุดไม่เกิน 30% ของรายได้ และไม่เกิน 200,000 บาท" />
                                         <NumberInput label="กองทุน RMF" value={rmf} onChange={setRmf} maxNote="สูงสุดไม่เกิน 30% ของรายได้ และไม่เกิน 500,000 บาท" />
@@ -1070,6 +1077,11 @@
                                     <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden mt-6 sm:mt-8">
                                         <div className="absolute top-0 right-0 w-32 h-32 sm:w-48 sm:h-48 bg-indigo-500/20 blur-[40px] sm:blur-[50px] rounded-full"></div>
                                         <div className="relative z-10 space-y-3 sm:space-y-4">
+                                            {calculation.breakdown.minTaxApplied && (
+                                                <div className="text-amber-300 text-xs sm:text-sm font-semibold leading-relaxed">
+                                                    ⚠️ ใช้ภาษีขั้นต่ำ 0.5% ของเงินได้นอกจาก 40(1) ({formatMoney(calculation.breakdown.minimumTax)}) เพราะสูงกว่าภาษีอัตราก้าวหน้า ({formatMoney(calculation.breakdown.progressiveTax)}) ตาม ม.48(2)
+                                                </div>
+                                            )}
                                             <div className="flex justify-between text-white/80 font-bold text-sm sm:text-base">
                                                 <span>ภาษีที่คำนวณได้รวมทั้งสิ้น</span>
                                                 <span>{formatMoney(calculation.tax)}</span>
