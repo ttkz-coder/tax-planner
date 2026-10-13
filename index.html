@@ -3,1132 +3,1072 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Tax Planner Pro</title>
+    <title>Tax Planner 3D</title>
+    <meta name="description" content="วางแผนภาษีเงินได้บุคคลธรรมดา ภ.ง.ด.90/91 พร้อมภาพ 3 มิติ">
+    <meta name="theme-color" content="#020617">
 
     <link rel="apple-touch-icon" href="taxes.png">
     <link rel="icon" type="image/png" href="taxes.png">
-    <meta name="apple-mobile-web-app-title" content="Tax Planner Pro">
-    
-    <!-- Google Fonts: Prompt -->
+    <meta name="apple-mobile-web-app-title" content="Tax Planner 3D">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Chart.js สำหรับทำ Data Visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.5"></script>
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="tax-engine.js"></script>
 
     <style>
+        :root { color-scheme: dark; }
         body {
             font-family: 'Prompt', sans-serif;
-            background-color: #0f172a; /* Slate 900 Background for Premium Feel */
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
-            background-attachment: fixed;
-            color: #334155;
+            background-color: #020617;
+            color: #e2e8f0;
             -webkit-font-smoothing: antialiased;
             min-height: 100vh;
+            overflow-x: hidden;
         }
-        
-        input[type="text"], input[type="number"], select {
-            -webkit-appearance: none;
-            appearance: none;
-            font-size: 16px; /* ป้องกัน iOS ซูมเวลากด input */
+        .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+        .aurora::before, .aurora::after {
+            content: ''; position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%;
+            filter: blur(90px); opacity: .35; animation: drift 24s ease-in-out infinite alternate;
         }
+        .aurora::before { background: radial-gradient(circle, #4f46e5 0, transparent 65%); top: -30vmax; left: -20vmax; }
+        .aurora::after { background: radial-gradient(circle, #0d9488 0, transparent 65%); bottom: -35vmax; right: -25vmax; animation-delay: -12s; }
+        @keyframes drift { to { transform: translate(8vmax, 6vmax) scale(1.1); } }
 
-        /* Custom Scrollbar สำหรับ Modal ให้ดูพรีเมียม */
-        ::-webkit-scrollbar { width: 8px; }
+        input[type="text"], select { -webkit-appearance: none; appearance: none; font-size: 16px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        .premium-glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-        .input-premium {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .glass {
+            background: linear-gradient(160deg, rgba(30,41,59,.72), rgba(15,23,42,.72));
+            border: 1px solid rgba(148,163,184,.14);
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 20px 50px -20px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
         }
-        .input-premium:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.15), inset 0 0 0 2px #818cf8;
-            outline: none;
-            border-color: transparent;
-            background-color: white;
+        .field {
+            background: rgba(2,6,23,.55);
+            border: 1px solid rgba(148,163,184,.18);
+            color: #f8fafc;
+            transition: border-color .2s, box-shadow .2s, background .2s;
         }
+        .field:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 4px rgba(99,102,241,.18); background: rgba(2,6,23,.8); }
+        .field::placeholder { color: #475569; }
+        select.field option { background: #0f172a; }
 
-        .fade-in-up {
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .fade-in-up { animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) both; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-        /* เล็กน้อยสำหรับ Animation ตัวเลขวิ่ง */
-        .pulse-slow {
-            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        .scene-wrap { touch-action: pan-y; cursor: grab; }
+        .scene-wrap:active { cursor: grabbing; }
+        .scene-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .aurora::before, .aurora::after, .fade-in-up { animation: none; }
         }
     </style>
 </head>
 <body class="selection:bg-indigo-500 selection:text-white">
+    <div class="aurora"></div>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useMemo, useEffect, useRef } = React;
+        const { useState, useMemo, useEffect, useRef, useCallback } = React;
+        const TE = window.TaxEngine;
+
+        // ================= Utils =================
+        const fmt = (v) => (Number.isFinite(v) ? Math.round(v) : 0).toLocaleString('en-US');
+        const fmtShort = (v) => {
+            if (v >= 1e6) return `${+(v / 1e6).toFixed(v % 1e6 ? 2 : 0)}M`;
+            if (v >= 1e3) return `${+(v / 1e3).toFixed(0)}K`;
+            return `${Math.round(v)}`;
+        };
+        const pct = (v, d = 2) => `${(Number.isFinite(v) ? v : 0).toFixed(d)}%`;
+        const RATE_COLORS = ['#10b981', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#e11d48'];
 
         class ErrorBoundary extends React.Component {
-            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            constructor(p) { super(p); this.state = { error: null }; }
+            static getDerivedStateFromError(error) { return { error }; }
             render() {
-                if (this.state.hasError) {
-                    return (
-                        <div className="p-6 sm:p-8 max-w-lg mx-auto mt-10 sm:mt-20 bg-white rounded-[2rem] shadow-2xl text-center fade-in-up m-4">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6 shadow-inner">
-                                <svg className="w-8 h-8 sm:w-10 sm:h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                            </div>
-                            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2 sm:mb-3">อุ๊ปส์! เกิดข้อผิดพลาด</h2>
-                            <p className="text-slate-500 text-[14px] sm:text-[15px] mb-6 sm:mb-8 leading-relaxed">{this.state.error?.toString()}</p>
-                            <button onClick={() => window.location.reload()} className="w-full bg-slate-900 text-white px-6 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">โหลดหน้าจอใหม่</button>
-                        </div>
-                    );
-                }
-                return this.props.children;
+                if (!this.state.error) return this.props.children;
+                return (
+                    <div className="glass max-w-lg mx-auto mt-20 m-4 p-8 rounded-3xl text-center">
+                        <h2 className="text-2xl font-bold text-white mb-3">อุ๊ปส์! เกิดข้อผิดพลาด</h2>
+                        <p className="text-slate-400 mb-6">{String(this.state.error)}</p>
+                        <button onClick={() => location.reload()} className="w-full bg-indigo-600 text-white py-3 rounded-2xl font-bold">โหลดใหม่</button>
+                    </div>
+                );
             }
         }
 
-        // --- Modern Icons ---
-        const IconWallet = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>;
-        const IconTarget = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
-        const IconUsers = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
-        const IconShield = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>;
-        const IconCheck = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-        const IconHome = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
-        const IconHeartHandshake = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08v0c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"></path><path d="m18 15-2-2"></path><path d="m15 18-2-2"></path></svg>;
-        const IconSave = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
-        const IconFolder = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M2 10h20"></path></svg>;
-        const IconTrash = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
-        const IconWheelchair = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="6" r="2"></circle><path d="M8 20a6 6 0 0 1-6-6c0-2.8 2-5 4.5-5.5"></path><path d="M13 10h4"></path><path d="M10 11v6"></path><path d="M15 15v5h4"></path><path d="M10 6h4l3 9"></path></svg>;
-        const IconAlertCircle = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
-        const IconBadgeCheck = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>;
-        const IconLightbulb = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>;
-        const IconTrendingUp = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>;
-        const IconInfo = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
+        // ================= Icons =================
+        const Svg = ({ className, children, sw = 2 }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
+        const IconWallet = (p) => <Svg {...p}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></Svg>;
+        const IconUsers = (p) => <Svg {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Svg>;
+        const IconShield = (p) => <Svg {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></Svg>;
+        const IconSprout = (p) => <Svg {...p}><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></Svg>;
+        const IconPiggy = (p) => <Svg {...p}><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></Svg>;
+        const IconHome = (p) => <Svg {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Svg>;
+        const IconHeart = (p) => <Svg {...p}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></Svg>;
+        const IconTrash = (p) => <Svg {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></Svg>;
+        const IconTarget = (p) => <Svg {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></Svg>;
+        const IconAlert = (p) => <Svg {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Svg>;
+        const IconCheck = (p) => <Svg {...p} sw={2.5}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Svg>;
+        const IconSave = (p) => <Svg {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></Svg>;
+        const IconDoc = (p) => <Svg {...p}><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></Svg>;
+        const IconCalendar = (p) => <Svg {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Svg>;
+        const IconCube = (p) => <Svg {...p}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></Svg>;
+        const IconX = (p) => <Svg {...p} sw={2.5}><path d="M6 18 18 6M6 6l12 12"/></Svg>;
+        const IconSpark = (p) => <Svg {...p}><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1"/></Svg>;
 
-        const formatMoney = (val) => {
-            if (isNaN(val) || val === undefined || val === null) return "0";
-            return Math.round(val).toLocaleString('en-US');
-        };
+        // ================= 3D Scene =================
+        function makeLabel(text, { color = '#f8fafc', size = 0.42, weight = 600, bg = null } = {}) {
+            const px = 64, pad = bg ? 22 : 6;
+            const c = document.createElement('canvas');
+            const g = c.getContext('2d');
+            g.font = `${weight} ${px}px Prompt, sans-serif`;
+            const w = Math.ceil(g.measureText(text).width) + pad * 2;
+            c.width = w; c.height = px * 1.5;
+            g.font = `${weight} ${px}px Prompt, sans-serif`;
+            if (bg) {
+                g.fillStyle = bg;
+                const r = c.height / 2;
+                g.beginPath(); g.moveTo(r, 0); g.arcTo(w, 0, w, c.height, r); g.arcTo(w, c.height, 0, c.height, r); g.arcTo(0, c.height, 0, 0, r); g.arcTo(0, 0, w, 0, r); g.fill();
+            }
+            g.fillStyle = color; g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.fillText(text, w / 2, c.height / 2 + 3);
+            const tex = new THREE.CanvasTexture(c);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = 4;
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+            const s = new THREE.Sprite(mat);
+            s.scale.set(size * (w / c.height), size, 1);
+            s.renderOrder = 10;
+            return s;
+        }
 
-        const IncomeDonutChart = ({ totalIncome, expenses, allowances, netIncome }) => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
+        // ให้ object "งอก" ขึ้นมาตามแกนที่กำหนด
+        const grow = (obj, axis = 'y', delay = 0) => { obj.userData.grow = { axis, t: -delay }; obj.scale[axis] = 0.001; return obj; };
+
+        function buildStairs(group, calc) {
+            const W = 1.55, GAP = 0.18, D = 2.4;
+            const n = TE.BRACKETS.length;
+            const total = n * W + (n - 1) * GAP;
+            const x0 = -total / 2;
+            const idx = calc.brackets.reduce((acc, b) => (b.taxable > 0 ? b.index : acc), 0);
+            let marker = null;
+
+            calc.brackets.forEach((b, i) => {
+                const h = 0.35 + b.rate * 0.15;
+                const left = x0 + i * (W + GAP);
+                const color = new THREE.Color(RATE_COLORS[i]);
+
+                // โครงขั้นบันได (โปร่ง)
+                const ghostGeo = new THREE.BoxGeometry(W, h, D);
+                ghostGeo.translate(0, h / 2, 0);
+                const ghost = new THREE.Mesh(ghostGeo, new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 0.08, roughness: 0.4, depthWrite: false }));
+                ghost.position.x = left + W / 2;
+                group.add(ghost);
+                const edges = new THREE.LineSegments(new THREE.EdgesGeometry(ghostGeo), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.45 }));
+                edges.position.copy(ghost.position);
+                group.add(edges);
+
+                // ส่วนที่เงินได้สุทธิเข้ามาอยู่ในขั้นนี้
+                const span = Number.isFinite(b.max) ? b.max - b.min : 5000000;
+                const f = Math.min(1, b.taxable / span);
+                if (f > 0) {
+                    const fw = Math.max(0.04, W * f);
+                    const geo = new THREE.BoxGeometry(fw, h, D * 0.86);
+                    geo.translate(fw / 2, h / 2, 0);
+                    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: i === idx ? 0.55 : 0.25, roughness: 0.25, metalness: 0.35 }));
+                    m.position.x = left;
+                    group.add(grow(m, 'y', i * 0.07));
+                    if (b.tax > 0) {
+                        const tl = makeLabel(`฿${fmt(b.tax)}`, { size: 0.36, color: '#fff', bg: 'rgba(2,6,23,.75)' });
+                        tl.position.set(left + W / 2, h + 0.95, 0);
+                        group.add(tl);
+                    }
+                    if (i === idx) marker = { x: left + fw, h };
+                }
+
+                const rl = makeLabel(`${b.rate}%`, { size: 0.5, color: RATE_COLORS[i], weight: 800 });
+                rl.position.set(left + W / 2, h + 0.45, 0);
+                group.add(rl);
+                const range = Number.isFinite(b.max) ? `${fmtShort(b.min)}–${fmtShort(b.max)}` : `${fmtShort(b.min)}+`;
+                const bl = makeLabel(range, { size: 0.3, color: '#94a3b8', weight: 500 });
+                bl.position.set(left + W / 2, -0.3, D / 2 + 0.25);
+                group.add(bl);
+            });
+
+            if (marker) {
+                const pin = new THREE.Group();
+                const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 24), new THREE.MeshStandardMaterial({ color: '#f8fafc', emissive: '#818cf8', emissiveIntensity: 0.9 }));
+                cone.rotation.x = Math.PI;
+                pin.add(cone);
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.04, 12, 48), new THREE.MeshBasicMaterial({ color: '#a5b4fc' }));
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = -0.55 - 0.2;
+                pin.add(ring);
+                const lbl = makeLabel(`คุณอยู่ที่นี่ · ${fmt(calc.netIncome)}`, { size: 0.38, color: '#fff', bg: 'rgba(79,70,229,.92)' });
+                lbl.position.y = 0.75;
+                pin.add(lbl);
+                pin.position.set(marker.x, marker.h + 1.9, 0);
+                pin.userData.bob = marker.h + 1.9;
+                group.add(pin);
+            }
+            return { target: new THREE.Vector3(0, 1.8, 0), dist: 15.5 };
+        }
+
+        function buildDonut(group, calc) {
+            const total = calc.income.totalIncome;
+            const exp = Math.min(calc.expenses.total, total);
+            const allow = Math.min(calc.allowances, total - exp);
+            const tax = calc.tax;
+            const rest = Math.max(0, total - exp - allow - calc.tax);
+            const segs = [
+                { label: 'ค่าใช้จ่าย', value: exp, color: '#f43f5e', h: 0.7 },
+                { label: 'ค่าลดหย่อน', value: allow, color: '#10b981', h: 1.0 },
+                { label: 'ภาษี', value: tax, color: '#f59e0b', h: 1.9 },
+                { label: 'สุทธิหลังภาษี', value: rest, color: '#6366f1', h: 1.3 },
+            ].filter((s) => s.value > 0);
+            const sum = segs.reduce((s, x) => s + x.value, 0) || 1;
+            const R = 4, r = 2.3;
+            let a = Math.PI / 2;
+            segs.forEach((s, i) => {
+                const span = (s.value / sum) * Math.PI * 2;
+                const a0 = a, a1 = a + span - (segs.length > 1 ? 0.025 : 0);
+                const shape = new THREE.Shape();
+                shape.absarc(0, 0, R, a0, a1, false);
+                shape.absarc(0, 0, r, a1, a0, true);
+                const geo = new THREE.ExtrudeGeometry(shape, { depth: s.h, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3, curveSegments: 48 });
+                geo.rotateX(-Math.PI / 2);
+                const col = new THREE.Color(s.color);
+                const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.22, roughness: 0.3, metalness: 0.25 }));
+                // ดันชิ้นออกจากศูนย์กลางเล็กน้อย
+                const mid = (a0 + a1) / 2;
+                m.position.set(Math.cos(mid) * 0.12, 0, -Math.sin(mid) * 0.12);
+                group.add(grow(m, 'y', i * 0.12));
+                // วางป้ายเหลื่อมความสูงกัน ชิ้นเล็กๆ ที่อยู่ติดกันจะได้ไม่ทับกัน
+                const lr = R + 1.2 + (i % 2) * 0.9;
+                const ly = 2.3 + i * 0.95;
+                const l1 = makeLabel(`${s.label} ${((s.value / total) * 100).toFixed(1)}%`, { size: 0.38, color: s.color, bg: 'rgba(2,6,23,.82)', weight: 700 });
+                l1.position.set(Math.cos(mid) * lr, ly + 0.42, -Math.sin(mid) * lr);
+                group.add(l1);
+                const l2 = makeLabel(`฿${fmt(s.value)}`, { size: 0.32, color: '#e2e8f0', bg: 'rgba(2,6,23,.6)' });
+                l2.position.set(Math.cos(mid) * lr, ly, -Math.sin(mid) * lr);
+                group.add(l2);
+                const stem = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(Math.cos(mid) * (R - 0.6), s.h + 0.1, -Math.sin(mid) * (R - 0.6)), new THREE.Vector3(Math.cos(mid) * lr, ly - 0.2, -Math.sin(mid) * lr)]),
+                    new THREE.LineBasicMaterial({ color: s.color, transparent: true, opacity: 0.7 })
+                );
+                group.add(stem);
+                a += span;
+            });
+            const c1 = makeLabel('รายได้รวม', { size: 0.34, color: '#94a3b8', weight: 500 });
+            c1.position.set(0, 2.15, 0); group.add(c1);
+            const c2 = makeLabel(`฿${fmt(total)}`, { size: 0.55, color: '#fff', weight: 800 });
+            c2.position.set(0, 1.6, 0); group.add(c2);
+            return { target: new THREE.Vector3(0, 1.6, 0), dist: 16 };
+        }
+
+        function buildCoins(group, calc, opt) {
+            const bars = [
+                { label: 'ภาษีตอนนี้', value: calc.tax, color: '#f43f5e' },
+                { label: 'ถ้าลดหย่อนเต็ม', value: opt.bestTax, color: '#10b981' },
+                { label: 'หัก ณ ที่จ่ายแล้ว', value: calc.wht, color: '#38bdf8' },
+            ];
+            const max = Math.max(1, ...bars.map((b) => b.value));
+            const coinGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.2, 40);
+            const gold = new THREE.MeshStandardMaterial({ color: '#fcd34d', metalness: 0.6, roughness: 0.3, emissive: '#b45309', emissiveIntensity: 0.3 });
+            bars.forEach((b, i) => {
+                const x = (i - 1) * 3.4;
+                const count = b.value > 0 ? Math.max(1, Math.round((b.value / max) * 22)) : 0;
+                const stack = new THREE.Group();
+                stack.position.x = x;
+                for (let k = 0; k < count; k++) {
+                    const coin = new THREE.Mesh(coinGeo, gold);
+                    coin.position.set((Math.random() - 0.5) * 0.08, 0.1 + k * 0.22, (Math.random() - 0.5) * 0.08);
+                    coin.rotation.y = Math.random() * Math.PI;
+                    stack.add(coin);
+                }
+                group.add(grow(stack, 'y', i * 0.15));
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.35, 0.12, 48), new THREE.MeshStandardMaterial({ color: b.color, emissive: b.color, emissiveIntensity: 0.5, roughness: 0.4 }));
+                base.position.set(x, -0.06, 0);
+                group.add(base);
+                const top = 0.3 + count * 0.22;
+                const l1 = makeLabel(`฿${fmt(b.value)}`, { size: 0.5, color: '#fff', weight: 800, bg: 'rgba(2,6,23,.78)' });
+                l1.position.set(x, top + 0.6, 0); group.add(l1);
+                const l2 = makeLabel(b.label, { size: 0.36, color: b.color, weight: 700 });
+                l2.position.set(x, -0.45, 1.6); group.add(l2);
+            });
+            return { target: new THREE.Vector3(0, 2.2, 0), dist: 14 };
+        }
+
+        function disposeTree(obj) {
+            obj.traverse((o) => {
+                if (o.geometry) o.geometry.dispose();
+                if (o.material) {
+                    const mats = Array.isArray(o.material) ? o.material : [o.material];
+                    mats.forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+                }
+            });
+        }
+
+        const Scene3D = ({ mode, calc, opt }) => {
+            const mountRef = useRef(null);
+            const ctx = useRef(null);
+            const [noGL, setNoGL] = useState(false);
+            const [fontsReady, setFontsReady] = useState(false);
 
             useEffect(() => {
-                if (!chartRef.current) return;
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setFontsReady(true));
+                else setFontsReady(true);
+            }, []);
 
-                const cExp = Math.min(expenses, totalIncome);
-                const cAll = Math.min(allowances, totalIncome - cExp);
-                const cNet = Math.max(0, totalIncome - cExp - cAll);
+            useEffect(() => {
+                const el = mountRef.current;
+                if (!window.THREE) { setNoGL(true); return; }
+                let renderer;
+                try {
+                    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                } catch (e) { setNoGL(true); return; }
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                renderer.outputColorSpace = THREE.SRGBColorSpace;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                el.appendChild(renderer.domElement);
 
-                if (chartInstance.current) {
-                    chartInstance.current.destroy();
-                }
-                const ctx = chartRef.current.getContext('2d');
-                chartInstance.current = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['หักค่าใช้จ่าย', 'ค่าลดหย่อน', 'เงินได้สุทธิ'],
-                        datasets: [{
-                            data: [cExp, cAll, cNet],
-                            backgroundColor: ['#f43f5e', '#10b981', '#6366f1'],
-                            borderWidth: 0,
-                            hoverOffset: 8
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '72%',
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                titleFont: { family: 'Prompt', size: 14 },
-                                bodyFont: { family: 'Prompt', size: 14 },
-                                padding: 12,
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                titleColor: '#fff',
-                                bodyColor: '#fff',
-                                callbacks: {
-                                    label: (context) => ` ${context.label}: ${context.raw.toLocaleString()} บาท`
-                                }
-                            }
-                        }
-                    }
-                });
-                return () => {
-                    if (chartInstance.current) chartInstance.current.destroy();
+                const scene = new THREE.Scene();
+                scene.fog = new THREE.Fog(0x020617, 22, 40);
+                const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+                scene.add(new THREE.HemisphereLight(0xc7d2fe, 0x0f172a, 1.1));
+                const key = new THREE.DirectionalLight(0xffffff, 2.2);
+                key.position.set(6, 12, 8);
+                scene.add(key);
+                const rim = new THREE.PointLight(0x818cf8, 40, 30);
+                rim.position.set(-8, 6, -6);
+                scene.add(rim);
+
+                const world = new THREE.Group();
+                scene.add(world);
+                const floor = new THREE.Mesh(new THREE.CircleGeometry(11, 64), new THREE.MeshStandardMaterial({ color: 0x0b1224, roughness: 0.9, transparent: true, opacity: 0.85 }));
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -0.02;
+                world.add(floor);
+                const grid = new THREE.PolarGridHelper(11, 16, 8, 64, 0x1e293b, 0x1e293b);
+                grid.position.y = 0;
+                world.add(grid);
+                const content = new THREE.Group();
+                world.add(content);
+
+                const st = { yaw: -0.35, pitch: 0.42, vYaw: 0, drag: null, idle: 0, target: new THREE.Vector3(0, 1.5, 0), dist: 15, visible: true };
+                const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                const onDown = (e) => { st.drag = { x: e.clientX, y: e.clientY, yaw: st.yaw, pitch: st.pitch }; st.idle = 0; };
+                const onMove = (e) => {
+                    if (!st.drag) return;
+                    const dx = e.clientX - st.drag.x, dy = e.clientY - st.drag.y;
+                    if (e.pointerType === 'touch' && Math.abs(dy) > Math.abs(dx) * 1.2 && Math.abs(dx) < 8) return; // ให้เลื่อนหน้าได้
+                    st.yaw = st.drag.yaw - dx * 0.008;
+                    st.pitch = Math.max(0.08, Math.min(1.25, st.drag.pitch + dy * 0.005));
                 };
-            }, [totalIncome, expenses, allowances, netIncome]);
+                const onUp = () => { st.drag = null; };
+                const cvs = renderer.domElement;
+                cvs.addEventListener('pointerdown', onDown);
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
 
-            if(totalIncome === 0) return null;
+                const resize = () => {
+                    const w = el.clientWidth, h = el.clientHeight;
+                    if (!w || !h) return;
+                    renderer.setSize(w, h, false);
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                };
+                const ro = new ResizeObserver(resize);
+                ro.observe(el);
+                resize();
+                const io = new IntersectionObserver(([en]) => { st.visible = en.isIntersecting; });
+                io.observe(el);
 
+                const clock = new THREE.Clock();
+                let raf;
+                const loop = () => {
+                    raf = requestAnimationFrame(loop);
+                    const dt = Math.min(clock.getDelta(), 0.05);
+                    if (!st.visible || document.hidden) return;
+                    const time = clock.elapsedTime;
+                    if (!st.drag) { st.idle += dt; if (!reduce && st.idle > 2.5) st.yaw += dt * 0.12; }
+                    // ระยะกล้องปรับตามสัดส่วนจอ ให้มือถือเห็นครบ
+                    const dist = st.dist * Math.max(1, 1.6 / camera.aspect);
+                    camera.position.set(
+                        st.target.x + Math.sin(st.yaw) * Math.cos(st.pitch) * dist,
+                        st.target.y + Math.sin(st.pitch) * dist,
+                        st.target.z + Math.cos(st.yaw) * Math.cos(st.pitch) * dist
+                    );
+                    camera.lookAt(st.target);
+                    content.traverse((o) => {
+                        const g = o.userData.grow;
+                        if (g && g.t < 1) {
+                            g.t = reduce ? 1 : g.t + dt * 1.6;
+                            const k = Math.max(0, Math.min(1, g.t));
+                            o.scale[g.axis] = Math.max(0.001, 1 - Math.pow(1 - k, 3));
+                        }
+                        if (o.userData.bob !== undefined) o.position.y = o.userData.bob + (reduce ? 0 : Math.sin(time * 2.4) * 0.15);
+                    });
+                    renderer.render(scene, camera);
+                };
+                loop();
+
+                ctx.current = { content, st };
+                return () => {
+                    cancelAnimationFrame(raf);
+                    ro.disconnect(); io.disconnect();
+                    cvs.removeEventListener('pointerdown', onDown);
+                    window.removeEventListener('pointermove', onMove);
+                    window.removeEventListener('pointerup', onUp);
+                    disposeTree(scene);
+                    renderer.dispose();
+                    el.removeChild(cvs);
+                    ctx.current = null;
+                };
+            }, []);
+
+            useEffect(() => {
+                const c = ctx.current;
+                if (!c) return;
+                const prev = c.content.children.slice();
+                prev.forEach((o) => { c.content.remove(o); disposeTree(o); });
+                const builder = mode === 'donut' ? buildDonut : mode === 'coins' ? buildCoins : buildStairs;
+                if (mode === 'donut' && calc.income.totalIncome <= 0) return;
+                const view = builder(c.content, calc, opt);
+                c.st.target.copy(view.target);
+                c.st.dist = view.dist;
+            }, [mode, calc, opt, fontsReady]);
+
+            if (noGL) {
+                return (
+                    <div className="h-full flex items-center justify-center text-center text-slate-400 text-sm p-6">
+                        อุปกรณ์นี้ไม่รองรับ WebGL — ดูตัวเลขทั้งหมดได้ในรายละเอียดการคำนวณด้านล่าง
+                    </div>
+                );
+            }
             return (
-                <div className="bg-slate-50/70 p-5 sm:p-6 rounded-2xl border border-slate-100/50 mt-5 mb-5 fade-in-up">
-                    <h4 className="text-center font-bold text-slate-800 text-[14px] sm:text-[15px] mb-4 sm:mb-5 tracking-wide">โครงสร้างรายได้ของคุณ</h4>
-                    <div className="relative w-40 h-40 sm:w-48 sm:h-48 mx-auto">
-                        <canvas ref={chartRef}></canvas>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-[11px] sm:text-xs text-slate-500 font-semibold tracking-wider">รายได้รวม</span>
-                            <span className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatMoney(totalIncome)}</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col space-y-3 mt-6 text-[13px] sm:text-[14px]">
-                        <div className="flex justify-between items-center"><span className="flex items-center text-slate-600 font-medium"><span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#f43f5e] mr-2.5 sm:mr-3 shadow-sm"></span>หักค่าใช้จ่าย</span><span className="font-bold text-slate-800">{formatMoney(expenses)}</span></div>
-                        <div className="flex justify-between items-center"><span className="flex items-center text-slate-600 font-medium"><span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#10b981] mr-2.5 sm:mr-3 shadow-sm"></span>ค่าลดหย่อน</span><span className="font-bold text-slate-800">{formatMoney(allowances)}</span></div>
-                        <div className="flex justify-between items-center pt-3 mt-1 border-t border-slate-200"><span className="flex items-center font-extrabold text-indigo-900"><span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#6366f1] mr-2.5 sm:mr-3 shadow-sm"></span>เงินได้สุทธิ</span><span className="font-black text-indigo-600 text-base">{formatMoney(netIncome)}</span></div>
-                    </div>
+                <div ref={mountRef} className="scene-wrap absolute inset-0">
+                    {mode === 'donut' && calc.income.totalIncome <= 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm pointer-events-none">กรอกรายได้เพื่อดูโครงสร้างรายได้แบบ 3D</div>
+                    )}
                 </div>
             );
         };
 
-        const TaxBracketBarChart = ({ bracketDetails }) => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
-
-            useEffect(() => {
-                if (!chartRef.current) return;
-                
-                if (chartInstance.current) {
-                    chartInstance.current.destroy();
-                }
-                if(bracketDetails.length === 0) return;
-
-                const ctx = chartRef.current.getContext('2d');
-                chartInstance.current = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: bracketDetails.map(b => `อัตรา ${b.rate}%`),
-                        datasets: [{
-                            label: 'ภาษีที่ต้องเสียในขั้นนี้ (บาท)',
-                            data: bracketDetails.map(b => b.tax),
-                            backgroundColor: bracketDetails.map(b => b.rate === 0 ? '#10b981' : '#f43f5e'),
-                            borderRadius: 6,
-                            borderSkipped: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                titleFont: { family: 'Prompt', size: 14 },
-                                bodyFont: { family: 'Prompt', size: 14 },
-                                padding: 12,
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                callbacks: {
-                                    label: (context) => ` เสียภาษี: ${context.raw.toLocaleString()} บาท`
-                                }
-                            }
-                        },
-                        scales: {
-                            y: { 
-                                beginAtZero: true, 
-                                grid: { color: '#f1f5f9', drawBorder: false },
-                                ticks: { font: { family: 'Prompt' }, padding: 10 }
-                            },
-                            x: { 
-                                grid: { display: false, drawBorder: false },
-                                ticks: { font: { family: 'Prompt', weight: 'bold' } }
-                            }
-                        }
-                    }
-                });
-                return () => {
-                    if (chartInstance.current) chartInstance.current.destroy();
-                };
-            }, [bracketDetails]);
-
-            if(bracketDetails.length === 0) return null;
-
-            return <div className="w-full h-56 sm:h-64 mt-6 sm:mt-8 mb-4 fade-in-up"><canvas ref={chartRef}></canvas></div>;
+        // ================= Form Controls =================
+        const NumberInput = ({ label, value, onChange, note, unit = 'บาท', max, used, cap, disabled }) => {
+            const handle = (e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, '');
+                if (raw === '') return onChange('');
+                let n = parseInt(raw, 10);
+                if (max !== undefined && n > max) n = max;
+                onChange(n);
+            };
+            const showBar = cap !== undefined && cap > 0 && value !== '' && Number(value) > 0;
+            const ratio = showBar ? Math.min(1, (used ?? Number(value)) / cap) : 0;
+            const over = showBar && Number(value) > (used ?? Number(value)) + 0.5;
+            return (
+                <div className={`w-full ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <label className="block text-[13px] sm:text-sm font-semibold text-slate-300 mb-1.5">{label}</label>
+                    <div className="relative">
+                        <input type="text" inputMode="numeric" disabled={disabled}
+                            className={`field w-full rounded-xl py-3 pl-4 ${unit ? 'pr-14' : 'pr-4'} text-right font-bold text-lg`}
+                            value={value === '' || value === undefined ? '' : Number(value).toLocaleString('en-US')}
+                            onChange={handle} placeholder="0" />
+                        {unit && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">{unit}</span>}
+                    </div>
+                    {showBar && (
+                        <div className="mt-2">
+                            <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                                <div className={`h-full rounded-full transition-all duration-500 ${ratio >= 1 ? 'bg-emerald-400' : 'bg-indigo-400'}`} style={{ width: `${ratio * 100}%` }} />
+                            </div>
+                            <p className={`text-[11px] mt-1 font-medium ${over ? 'text-amber-400' : 'text-slate-500'}`}>
+                                ใช้สิทธิได้ {fmt(used ?? Number(value))} / เพดาน {fmt(cap)}{over ? ' · ส่วนเกินไม่ได้ลดหย่อน' : ''}
+                            </p>
+                        </div>
+                    )}
+                    {note && <p className="text-[11.5px] sm:text-xs text-slate-500 mt-1.5 leading-relaxed">{note}</p>}
+                </div>
+            );
         };
 
-        const CleanCard = ({ children, className = "" }) => (
-            <div className={`premium-glass-card rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-7 md:p-9 ${className} fade-in-up`}>
-                {children}
+        const Select = ({ label, value, onChange, children }) => (
+            <div>
+                <label className="block text-[13px] sm:text-sm font-semibold text-slate-300 mb-1.5">{label}</label>
+                <div className="relative">
+                    <select className="field w-full rounded-xl py-3 px-4 pr-10 font-semibold cursor-pointer" value={value} onChange={(e) => onChange(e.target.value)}>{children}</select>
+                    <svg className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </div>
             </div>
         );
 
-        const NumberInput = ({ label, value, onChange, maxNote, placeholder = "0", unit = "บาท", maxLength, maxValue, icon: IconComponent }) => {
-            const handleChange = (e) => {
-                let rawValue = e.target.value.replace(/[^0-9]/g, '');
-                if (rawValue === '') { onChange(''); return; }
-                let numValue = parseInt(rawValue, 10);
-                if (maxValue !== undefined && numValue > maxValue) numValue = maxValue;
-                onChange(numValue);
-            };
-
-            return (
-                <div className="mb-5 sm:mb-7 w-full">
-                    <label className="block text-[14px] sm:text-[15px] font-bold text-slate-700 mb-2 sm:mb-2.5 flex items-center">
-                        {IconComponent && <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-indigo-500" />}
-                        {label}
-                    </label>
-                    <div className="relative group">
-                        <input
-                            type="text" inputMode="numeric" maxLength={maxLength}
-                            className={`w-full p-3.5 sm:p-4 input-premium rounded-xl sm:rounded-2xl text-right ${unit ? 'pr-14 sm:pr-16' : 'pr-4'} font-bold text-slate-900 text-lg sm:text-xl`}
-                            value={value === '' ? '' : value.toLocaleString('en-US')}
-                            onChange={handleChange} placeholder={placeholder}
-                        />
-                        {unit && <span className="absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm sm:text-base transition-colors group-focus-within:text-indigo-500">{unit}</span>}
+        const Section = ({ icon: Icon, title, subtitle, accent, children, badge }) => (
+            <section className="glass rounded-3xl p-5 sm:p-7 fade-in-up">
+                <header className="flex items-start gap-3 mb-5 sm:mb-6">
+                    <span className={`p-2.5 rounded-2xl ${accent}`}><Icon className="w-5 h-5" /></span>
+                    <div className="flex-1 min-w-0">
+                        <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 flex-wrap">{title}{badge}</h2>
+                        {subtitle && <p className="text-xs sm:text-[13px] text-slate-400 mt-0.5">{subtitle}</p>}
                     </div>
-                    {maxNote && <p className="text-[12px] sm:text-[13px] font-medium text-slate-500 mt-2.5 sm:mt-3 flex items-start leading-relaxed bg-slate-50/50 border border-slate-100 p-2.5 sm:p-3 rounded-lg sm:rounded-xl">
-                        <span className="mr-2 sm:mr-2.5 mt-1 sm:mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-400 block flex-shrink-0 shadow-[0_0_5px_rgba(129,140,248,0.8)]"></span> 
-                        {maxNote}
-                    </p>}
+                </header>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5">{children}</div>
+            </section>
+        );
+
+        const Pill = ({ children, tone = 'slate' }) => {
+            const tones = { slate: 'bg-slate-700/60 text-slate-300', amber: 'bg-amber-500/15 text-amber-300', emerald: 'bg-emerald-500/15 text-emerald-300', rose: 'bg-rose-500/15 text-rose-300', indigo: 'bg-indigo-500/20 text-indigo-200' };
+            return <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${tones[tone]}`}>{children}</span>;
+        };
+
+        const Modal = ({ onClose, children, wide }) => {
+            useEffect(() => {
+                const k = (e) => e.key === 'Escape' && onClose();
+                window.addEventListener('keydown', k);
+                document.body.style.overflow = 'hidden';
+                return () => { window.removeEventListener('keydown', k); document.body.style.overflow = ''; };
+            }, [onClose]);
+            return (
+                <div className="fixed inset-0 z-[200] bg-slate-950/70 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-6 fade-in-up" onClick={onClose}>
+                    <div onClick={(e) => e.stopPropagation()} className={`glass !bg-slate-900/95 w-full ${wide ? 'max-w-3xl' : 'max-w-sm'} max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 relative`}>
+                        {children}
+                    </div>
                 </div>
             );
         };
 
+        // ================= Static content =================
+        const PRESETS = {
+            office: { label: '🏢 พนักงานออฟฟิศ', data: (y) => ({ salary: 45000, bonus: 90000, socialSecurity: TE.YEAR_RULES[y].sso, withheldTax: 15000 }) },
+            investor: { label: '📈 สายลงทุนเต็มแม็กซ์', data: (y) => ({ salary: 120000, bonus: 200000, socialSecurity: TE.YEAR_RULES[y].sso, providentFund: 216000, lifeInsurance: 100000, rmf: 284000, tesg: 300000, withheldTax: 150000 }) },
+            freelance: { label: '💻 ฟรีแลนซ์ 40(2)', data: () => ({ income402: 800000, withheldTax: 24000, healthInsurance: 25000, rmf: 50000 }) },
+            photo: { label: '📸 งานประจำ + รับถ่ายภาพ', data: (y) => ({ salary: 40000, bonus: 40000, income402: 240000, socialSecurity: TE.YEAR_RULES[y].sso, withheldTax: 12000, tesg: 30000 }) },
+            seller: { label: '🛍️ ขายของออนไลน์ 40(8)', data: () => ({ income408: 1500000, healthInsurance: 20000, lifeInsurance: 30000 }) },
+        };
+
+        const CALENDAR = [
+            { when: '1 ม.ค. – 31 มี.ค.', what: 'ยื่น ภ.ง.ด.90/91 ของปีภาษีก่อนหน้า', sub: 'ยื่นออนไลน์ปกติได้ขยายเวลาเพิ่มราว 8 วัน (ตรวจสอบประกาศแต่ละปี)' },
+            { when: '1 ก.ค. – 30 ก.ย.', what: 'ยื่น ภ.ง.ด.94 (ภาษีครึ่งปี)', sub: 'เฉพาะผู้มีเงินได้ 40(5)–40(8) เช่น ค่าเช่า ขายของ ธุรกิจ' },
+            { when: 'ก่อน 31 ธ.ค.', what: 'ปิดดีลลดหย่อนให้ทันปีภาษี', sub: 'ซื้อ RMF / Thai ESG, จ่ายเบี้ยประกัน, บริจาคผ่าน e-Donation' },
+            { when: 'ภายใน 3 ปี', what: 'ขอคืนภาษีย้อนหลังได้', sub: 'นับจากวันสุดท้ายของกำหนดยื่นแบบ' },
+        ];
+        const RULES_INFO = [
+            { name: 'RMF', text: 'ถือครอง 5 ปีเต็ม และขายได้เมื่ออายุ 55 ปีบริบูรณ์ · ไม่ต้องซื้อทุกปี' },
+            { name: 'Thai ESG', text: 'ซื้อตั้งแต่ปี 2568 ถือครอง 5 ปีนับวันชนวัน (ก่อนหน้า 8 ปี) · แยกเพดานจากกลุ่มเกษียณ' },
+            { name: 'ThaiESGX', text: 'สับเปลี่ยน LTF: ปี 2568 สูงสุด 300,000 ปี 2569–2572 ปีละ 50,000 · เงินใหม่เฉพาะปี 2568' },
+            { name: 'SSF', text: 'สิทธิลดหย่อนสิ้นสุดแล้ว (ซื้อได้ถึง 31 ธ.ค. 2567) แต่หน่วยที่ถืออยู่ยังต้องถือให้ครบ 10 ปี' },
+            { name: 'ประกันชีวิต', text: 'สัญญา 10 ปีขึ้นไป · ต้องแจ้งบริษัทประกันให้ส่งข้อมูลใช้สิทธิกับสรรพากร' },
+            { name: 'ประกันบำนาญ', text: 'จ่ายเบี้ยครบก่อนรับบำนาญ และรับเงินช่วงอายุ 55–85 ปี' },
+            { name: 'PVD / กบข. / กอช.', text: 'ไม่เกิน 15% ของค่าจ้าง · กอช. สูงสุด 30,000 ต่อปี · รวมกลุ่มเกษียณไม่เกิน 500,000' },
+        ];
+        const DOCS = [
+            'หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ) จากทุกแหล่งรายได้',
+            'หนังสือรับรองการซื้อหน่วยลงทุน RMF / Thai ESG',
+            'หนังสือรับรองเบี้ยประกันชีวิต/สุขภาพ/บำนาญ',
+            'หนังสือรับรองดอกเบี้ยเงินกู้ซื้อบ้าน',
+            'ใบเสร็จ e-Tax Invoice / e-Receipt สำหรับมาตรการรัฐ',
+            'เงินบริจาคผ่านระบบ e-Donation (ระบบดึงให้อัตโนมัติ)',
+        ];
+
+        const STORAGE_KEY = 'taxMastery_PND90_local';
+        const DRAFT_KEY = 'taxPlanner3D_draft';
+        const store = {
+            get(k, fallback) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+            set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
+        };
+
+        // ================= App =================
         const App = () => {
-            const STORAGE_KEY = 'taxMastery_PND90_local';
-
-            // Local Save States
-            const [savedPlans, setSavedPlans] = useState([]);
+            const [form, setForm] = useState(() => TE.migrate(store.get(DRAFT_KEY, TE.EMPTY_DATA)));
+            const [savedPlans, setSavedPlans] = useState(() => store.get(STORAGE_KEY, []));
             const [planName, setPlanName] = useState('');
-            const [notification, setNotification] = useState('');
-            
-            // Modal States
-            const [showClearConfirm, setShowClearConfirm] = useState(false);
-            const [showMaxSavingDetails, setShowMaxSavingDetails] = useState(false);
-            const [showBreakdown, setShowBreakdown] = useState(false);
-            const [showPresetConfirm, setShowPresetConfirm] = useState({ show: false, type: null });
+            const [toast, setToast] = useState('');
+            const [mode, setMode] = useState('stairs');
+            const [modal, setModal] = useState(null); // 'clear' | 'breakdown' | {preset}
 
-            // Data States
-            const [salary, setSalary] = useState('');
-            const [bonus, setBonus] = useState('');
-            const [otherIncome, setOtherIncome] = useState('');
-            const [otherIncomeType, setOtherIncomeType] = useState('402');
-            const [withheldTax, setWithheldTax] = useState('');
-            
-            const [status, setStatus] = useState('single');
-            const [children, setChildren] = useState(''); 
-            const [children2018, setChildren2018] = useState(''); 
-            const [parents, setParents] = useState(''); 
-            const [parentsHealthInsurance, setParentsHealthInsurance] = useState(''); 
-            const [disabledPersons, setDisabledPersons] = useState('');
+            const set = useCallback((k) => (v) => setForm((f) => ({ ...f, [k]: v })), []);
+            useEffect(() => { store.set(DRAFT_KEY, form); }, [form]);
 
-            const [socialSecurity, setSocialSecurity] = useState('');
-            const [lifeInsurance, setLifeInsurance] = useState('');
-            const [healthInsurance, setHealthInsurance] = useState('');
-            const [providentFund, setProvidentFund] = useState('');
-            const [ssf, setSsf] = useState('');
-            const [rmf, setRmf] = useState('');
-            const [pensionInsurance, setPensionInsurance] = useState('');
-            const [tesg, setTesg] = useState('');
-            
-            const [mortgageInterest, setMortgageInterest] = useState('');
-            const [shoppingStimulus, setShoppingStimulus] = useState('');
-            const [doubleDonations, setDoubleDonations] = useState('');
-            const [donations, setDonations] = useState('');
+            const toastTimer = useRef(null);
+            const notify = (msg) => { setToast(msg); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(''), 2800); };
 
-            useEffect(() => {
-                try {
-                    const stored = localStorage.getItem(STORAGE_KEY);
-                    if (stored) {
-                        setSavedPlans(JSON.parse(stored));
-                    }
-                } catch (e) {
-                    console.error("Failed to load plans from local storage", e);
-                }
-            }, []);
+            const calc = useMemo(() => TE.calculate(form), [form]);
+            const opt = useMemo(() => TE.optimize(form), [form]);
+            const R = calc.rules;
+            const year = calc.year;
+            const married = form.status === 'married_no_income';
+            const allowance = (key) => (calc.allowanceItems.find((i) => i.key === key) || {}).amount || 0;
 
-            const showNotificationMsg = (msg) => {
-                setNotification(msg);
-                setTimeout(() => setNotification(''), 3000);
+            const clearForm = () => { setForm({ ...TE.EMPTY_DATA, year: form.year }); setModal(null); notify('🧹 ล้างข้อมูลเรียบร้อย'); };
+            const applyPreset = (key) => {
+                setForm({ ...TE.EMPTY_DATA, year: form.year, ...PRESETS[key].data(form.year) });
+                setModal(null);
+                notify(`โหลดโปรไฟล์ ${PRESETS[key].label}`);
             };
-
-            const getFormData = () => ({
-                salary, bonus, otherIncome, otherIncomeType, withheldTax, status, children, children2018, 
-                parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, 
-                providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, 
-                shoppingStimulus, doubleDonations, donations
-            });
-
-            const handleClearData = () => {
-                setSalary(''); setBonus(''); setOtherIncome(''); setOtherIncomeType('402'); setWithheldTax('');
-                setStatus('single'); setChildren(''); setChildren2018('');
-                setParents(''); setParentsHealthInsurance(''); setDisabledPersons('');
-                setSocialSecurity(''); setLifeInsurance(''); setHealthInsurance('');
-                setProvidentFund(''); setSsf(''); setRmf(''); setPensionInsurance('');
-                setTesg(''); setMortgageInterest(''); setShoppingStimulus('');
-                setDoubleDonations(''); setDonations('');
-                
-                setShowMaxSavingDetails(false); setShowBreakdown(false); setShowClearConfirm(false);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                showNotificationMsg("🧹 ล้างข้อมูลทั้งหมดเรียบร้อยแล้ว");
+            const applyPlan = () => {
+                setForm((f) => {
+                    const next = { ...f };
+                    opt.plan.forEach((p) => { next[p.field] = Math.ceil((Number(next[p.field]) || 0) + p.amount); });
+                    return next;
+                });
+                notify('✨ เติมยอดลดหย่อนตามแผนลงในฟอร์มแล้ว');
             };
-
-            const applyPreset = (type) => {
-                handleClearData();
-                setTimeout(() => {
-                    if (type === 'office_basic') {
-                        setSalary(45000); setBonus(90000); setSocialSecurity(9000); setWithheldTax(15000);
-                        showNotificationMsg("โหลดโปรไฟล์: พนักงานออฟฟิศ ทั่วไป");
-                    } else if (type === 'investor_max') {
-                        setSalary(120000); setBonus(200000); setSocialSecurity(9000); setProvidentFund(216000);
-                        setLifeInsurance(100000); setSsf(200000); setRmf(284000); setTesg(100000); setWithheldTax(100000);
-                        showNotificationMsg("โหลดโปรไฟล์: สายลงทุนเต็มแม็กซ์");
-                    } else if (type === 'freelance') {
-                        setOtherIncomeType('402'); setOtherIncome(800000); setWithheldTax(24000);
-                        setHealthInsurance(25000); setSsf(50000);
-                        showNotificationMsg("โหลดโปรไฟล์: ฟรีแลนซ์ รับจ้างอิสระ");
-                    }
-                    setShowPresetConfirm({show: false, type: null});
-                }, 100);
-            };
-
-            const handleSavePlan = (e) => {
+            const savePlan = (e) => {
                 e.preventDefault();
-                if (!planName.trim()) return showNotificationMsg("กรุณาตั้งชื่อแผนภาษี");
-
-                try {
-                    const newPlan = { id: Date.now().toString(), name: planName.trim(), data: getFormData() };
-                    const updatedPlans = [newPlan, ...savedPlans];
-                    setSavedPlans(updatedPlans);
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedPlans));
-                    setPlanName('');
-                    showNotificationMsg(`บันทึกแผน "${newPlan.name}" สำเร็จ`);
-                } catch (error) {
-                    showNotificationMsg("เกิดข้อผิดพลาดในการบันทึก");
-                }
+                if (!planName.trim()) return notify('กรุณาตั้งชื่อแผนก่อนนะ');
+                const next = [{ id: Date.now().toString(), name: planName.trim(), data: form }, ...savedPlans];
+                setSavedPlans(next); store.set(STORAGE_KEY, next); setPlanName('');
+                notify(`บันทึกแผน "${planName.trim()}" แล้ว`);
             };
+            const loadPlan = (p) => { setForm(TE.migrate(p.data)); notify(`โหลดแผน "${p.name}"`); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+            const deletePlan = (p) => { const next = savedPlans.filter((x) => x.id !== p.id); setSavedPlans(next); store.set(STORAGE_KEY, next); notify(`ลบแผน "${p.name}" แล้ว`); };
+            const planCalcs = useMemo(() => savedPlans.map((p) => ({ plan: p, c: TE.calculate(p.data) })), [savedPlans]);
 
-            const loadPlan = (plan) => {
-                const d = plan.data || {};
-                setSalary(d.salary || ''); setBonus(d.bonus || ''); setOtherIncome(d.otherIncome || ''); setOtherIncomeType(d.otherIncomeType || '402'); setWithheldTax(d.withheldTax || '');
-                setStatus(d.status || 'single'); setChildren(d.children || ''); setChildren2018(d.children2018 || '');
-                setParents(d.parents || ''); setParentsHealthInsurance(d.parentsHealthInsurance || ''); setDisabledPersons(d.disabledPersons || '');
-                setSocialSecurity(d.socialSecurity || ''); setLifeInsurance(d.lifeInsurance || ''); setHealthInsurance(d.healthInsurance || '');
-                setProvidentFund(d.providentFund || ''); setSsf(d.ssf || ''); setRmf(d.rmf || ''); setPensionInsurance(d.pensionInsurance || '');
-                setTesg(d.tesg || ''); setMortgageInterest(d.mortgageInterest || ''); setShoppingStimulus(d.shoppingStimulus || '');
-                setDoubleDonations(d.doubleDonations || ''); setDonations(d.donations || '');
-                
-                showNotificationMsg(`โหลดแผน "${plan.name}" สำเร็จ`);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-
-            const deletePlan = (id, name) => {
-                const updatedPlans = savedPlans.filter(p => p.id !== id);
-                setSavedPlans(updatedPlans);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedPlans));
-                showNotificationMsg(`ลบแผน "${name}" แล้ว`);
-            };
-
-            const calculateTaxForData = (data) => {
-                const safeNum = (val) => Number(val) || 0;
-                
-                const salaryAnnual = safeNum(data.salary) * 12;
-                const bonusValue = safeNum(data.bonus);
-                const income401 = salaryAnnual + bonusValue;
-                const otherIncomeValue = safeNum(data.otherIncome);
-                const type = data.otherIncomeType || '402';
-                
-                const totalIncome = income401 + otherIncomeValue;
-                
-                let expenses = 0;
-                let expenseBreakdownStr = "";
-                
-                if (type === '402') {
-                    expenses = Math.min((income401 + otherIncomeValue) * 0.5, 100000);
-                    expenseBreakdownStr = "หักเหมา 50% ของรายได้ทั้งหมด (สูงสุดไม่เกิน 100,000 บาท)";
-                } else if (type === '408') {
-                    const exp401 = Math.min(income401 * 0.5, 100000);
-                    const exp408 = otherIncomeValue * 0.60;
-                    expenses = exp401 + exp408;
-                    expenseBreakdownStr = `เงินเดือนหักเหมา (${formatMoney(exp401)}) + ธุรกิจหักเหมา 60% (${formatMoney(exp408)})`;
-                } else if (type === '405') {
-                    const exp401 = Math.min(income401 * 0.5, 100000);
-                    const exp405 = otherIncomeValue * 0.30;
-                    expenses = exp401 + exp405;
-                    expenseBreakdownStr = `เงินเดือนหักเหมา (${formatMoney(exp401)}) + ค่าเช่าหักเหมา 30% (${formatMoney(exp405)})`;
-                }
-
-                let personalAllowance = data.status === 'married_no_income' ? 120000 : 60000;
-                let familyAllowance = (safeNum(data.children) * 30000) + (safeNum(data.children2018) * 60000) + 
-                                      (Math.min(safeNum(data.parents), 4) * 30000) + Math.min(safeNum(data.parentsHealthInsurance), 15000) + 
-                                      (safeNum(data.disabledPersons) * 60000);
-                
-                let socialSec = Math.min(safeNum(data.socialSecurity), 9000);
-                let healthVal = Math.min(safeNum(data.healthInsurance), 25000);
-                let genLifeUsed = Math.min(healthVal + safeNum(data.lifeInsurance), 100000);
-                
-                const pLimit = Math.min(totalIncome * 0.15, 200000);
-                const actualPension = Math.min(safeNum(data.pensionInsurance), pLimit);
-                let pensionExcess = safeNum(data.pensionInsurance) - actualPension;
-                if (pensionExcess > 0 && genLifeUsed < 100000) {
-                    genLifeUsed += Math.min(pensionExcess, 100000 - genLifeUsed);
-                }
-                
-                const pvdActual = Math.min(safeNum(data.providentFund), income401 * 0.15, 500000);
-                const ssfActual = Math.min(safeNum(data.ssf), totalIncome * 0.30, 200000);
-                const rmfActual = Math.min(safeNum(data.rmf), totalIncome * 0.30, 500000);
-                const retireGroup = Math.min(pvdActual + ssfActual + rmfActual + actualPension, 500000);
-                
-                const tesgActual = Math.min(safeNum(data.tesg), totalIncome * 0.30, 300000);
-                
-                let realEstateStimulus = Math.min(safeNum(data.mortgageInterest), 100000) + Math.min(safeNum(data.shoppingStimulus), 50000);
-
-                const preDonAllowance = personalAllowance + familyAllowance + socialSec + genLifeUsed + retireGroup + tesgActual + realEstateStimulus;
-
-                let netForDon = Math.max(0, totalIncome - expenses - preDonAllowance);
-
-                const doubleDon = Math.min(safeNum(data.doubleDonations) * 2, netForDon * 0.10);
-                let netAfterDoubleDon = netForDon - doubleDon;
-                const genDon = Math.min(safeNum(data.donations), netAfterDoubleDon * 0.10);
-                const totalDonationAllowance = doubleDon + genDon;
-
-                let netIncome = Math.max(0, netAfterDoubleDon - genDon);
-                const totalAllowances = preDonAllowance + doubleDon + genDon;
-
-                const brackets = [
-                    { m: 0, r: 0 }, { m: 150000, r: 0.05 }, { m: 300000, r: 0.10 }, { m: 500000, r: 0.15 },
-                    { m: 750000, r: 0.20 }, { m: 1000000, r: 0.25 }, { m: 2000000, r: 0.30 }, { m: 5000000, r: 0.35 }
-                ];
-
-                let tax = 0;
-                let currentBracketIndex = 0;
-                let bracketDetails = [];
-                
-                // Next Bracket Logic
-                let nextBracketGap = 0;
-                let nextBracketRate = 0;
-
-                for (let i = 0; i < brackets.length; i++) {
-                    const b = brackets[i];
-                    const nextM = brackets[i+1] ? brackets[i+1].m : Infinity;
-                    if (netIncome > b.m) {
-                        const taxableInBracket = Math.min(netIncome - b.m, nextM - b.m);
-                        const taxInBracket = taxableInBracket * b.r;
-                        tax += taxInBracket;
-                        if (taxInBracket > 0 || b.r === 0) currentBracketIndex = i;
-
-                        if (taxableInBracket > 0) {
-                            bracketDetails.push({
-                                label: b.m === 0 ? '0 - 150,000 (ยกเว้น)' : `${formatMoney(b.m + 1)} - ${nextM === Infinity ? 'ขึ้นไป' : formatMoney(nextM)}`,
-                                taxable: taxableInBracket,
-                                tax: taxInBracket,
-                                rate: b.r * 100
-                            });
-                        }
-                    }
-                }
-
-                // ภาษีขั้นต่ำ ม.48(2): เงินได้นอกจาก 40(1) ตั้งแต่ 120,000 บาท คิด 0.5% ของเงินได้พึงประเมิน
-                // ถ้าเกิน 5,000 บาท และสูงกว่าภาษีอัตราก้าวหน้า ต้องเสียตามวิธีนี้
-                const progressiveTax = tax;
-                const minimumTax = otherIncomeValue >= 120000 ? otherIncomeValue * 0.005 : 0;
-                const minTaxApplied = minimumTax > 5000 && minimumTax > progressiveTax;
-                if (minTaxApplied) tax = minimumTax;
-
-                // Calculate Gap to Next Bracket
-                if (brackets[currentBracketIndex + 1]) {
-                    nextBracketGap = brackets[currentBracketIndex + 1].m - netIncome;
-                    nextBracketRate = brackets[currentBracketIndex + 1].r * 100;
-                }
-
-                const effectiveTaxRate = totalIncome > 0 ? ((tax / totalIncome) * 100).toFixed(2) : 0;
-
-                return { 
-                    tax, totalIncome, totalAllowances, netIncome, effectiveTaxRate,
-                    nextBracket: { gap: nextBracketGap, rate: nextBracketRate },
-                    lifeAndHealthUsed: genLifeUsed, actualTesg: tesgActual, retirementGroup: retireGroup, 
-                    currentBracketRate: brackets[currentBracketIndex].r * 100,
-                    totalDonationAllowance,
-                    breakdown: { expenses, expenseBreakdownStr, personalAllowance, familyAllowance, socialSec, genLifeUsed, retireGroup, tesgActual, realEstateStimulus, doubleDon, genDon, bracketDetails, progressiveTax, minimumTax, minTaxApplied, wht: safeNum(data.withheldTax) }
-                };
-            };
-
-            const calculation = useMemo(() => {
-                const safeNum = (val) => Number(val) || 0;
-                const currentData = { salary, bonus, otherIncome, otherIncomeType, withheldTax, status, children, children2018, parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, shoppingStimulus, doubleDonations, donations };
-                
-                const currentCalc = calculateTaxForData(currentData);
-                
-                const totalIncome = currentCalc.totalIncome;
-                const maxLifeAvailable = 100000 - currentCalc.lifeAndHealthUsed;
-                const pvdActual = Math.min(safeNum(providentFund), (safeNum(salary) * 12 + safeNum(bonus)) * 0.15, 500000);
-                const pensionActual = Math.min(safeNum(pensionInsurance), totalIncome * 0.15, 200000);
-                const groupUsedBeforeNewFunds = pvdActual + pensionActual;
-                let remainingRetirementCapacity = Math.max(0, 500000 - groupUsedBeforeNewFunds - safeNum(ssf) - safeNum(rmf));
-                const maxRmfByIncome = totalIncome * 0.30;
-                remainingRetirementCapacity = Math.min(remainingRetirementCapacity, Math.max(0, maxRmfByIncome - safeNum(rmf)));
-                const maxTesgCapacity = Math.min(totalIncome * 0.30, 300000);
-                const remainingTesg = Math.max(0, maxTesgCapacity - currentCalc.actualTesg);
-
-                const maxData = { ...currentData, 
-                    lifeInsurance: safeNum(currentData.lifeInsurance) + maxLifeAvailable,
-                    rmf: safeNum(currentData.rmf) + remainingRetirementCapacity,
-                    tesg: safeNum(currentData.tesg) + remainingTesg
-                };
-
-                const maxCalc = calculateTaxForData(maxData);
-                const paidWHT = safeNum(withheldTax);
-                const taxDifference = currentCalc.tax - paidWHT;
-
-                return {
-                    ...currentCalc, paidWHT, taxDifference: Math.abs(taxDifference), isRefund: taxDifference < 0,
-                    lowestPossibleTax: maxCalc.tax, maxPotentialTaxSavings: currentCalc.tax - maxCalc.tax, 
-                    investmentNeeded: maxLifeAvailable + remainingRetirementCapacity + remainingTesg,
-                    caps: { life: maxLifeAvailable, retire: remainingRetirementCapacity, tesg: remainingTesg }
-                };
-            }, [salary, bonus, otherIncome, otherIncomeType, withheldTax, status, children, children2018, parents, parentsHealthInsurance, disabledPersons, socialSecurity, lifeInsurance, healthInsurance, providentFund, ssf, rmf, pensionInsurance, tesg, mortgageInterest, shoppingStimulus, doubleDonations, donations]);
+            const tone = calc.isRefund ? 'refund' : calc.balance > 0.5 ? 'pay' : 'even';
+            const heroBg = { refund: 'from-emerald-600/40 via-teal-700/30 to-slate-900/40', pay: 'from-rose-600/40 via-rose-800/30 to-slate-900/40', even: 'from-indigo-600/40 via-indigo-800/30 to-slate-900/40' }[tone];
+            const heroLabel = { refund: 'ได้รับเงินคืน', pay: 'ต้องชำระเพิ่ม', even: 'ภาษีสุทธิ' }[tone];
+            const savingPer10k = calc.marginalRate * 100;
 
             return (
-                <div className="max-w-md md:max-w-[1240px] mx-auto pt-6 sm:pt-10 px-4 sm:px-5 md:px-8 space-y-6 sm:space-y-10 relative pb-28 xl:pb-0">
-                    
-                    {/* Notifications & Modals */}
-                    {notification && (
-                        <div className="fixed top-4 sm:top-8 right-4 sm:right-8 z-[300] bg-slate-900/90 backdrop-blur-xl border border-white/10 text-white px-5 sm:px-7 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl flex items-center fade-in-up">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-emerald-500/20 flex items-center justify-center mr-3 sm:mr-4">
-                                <IconCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
-                            </div>
-                            <span className="font-semibold text-xs sm:text-sm tracking-wide">{notification}</span>
+                <div className="max-w-[1280px] mx-auto pt-5 sm:pt-8 px-4 sm:px-6 pb-32 xl:pb-12 space-y-5 sm:space-y-7">
+                    {toast && (
+                        <div className="fixed top-4 right-4 z-[300] glass !bg-slate-900/95 text-white px-5 py-3 rounded-2xl flex items-center gap-3 fade-in-up">
+                            <IconCheck className="w-5 h-5 text-emerald-400" /><span className="text-sm font-semibold">{toast}</span>
                         </div>
                     )}
 
-                    {showPresetConfirm.show && (
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[250] flex items-center justify-center p-4 fade-in-up">
-                            <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 md:p-10 max-w-sm w-full shadow-2xl border border-white/20">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6 shadow-inner">
-                                    <IconLightbulb className="w-8 h-8 sm:w-10 sm:h-10" />
-                                </div>
-                                <h3 className="text-xl sm:text-2xl font-bold text-center text-slate-900 mb-2 sm:mb-3">เขียนทับข้อมูลเดิม?</h3>
-                                <p className="text-center text-slate-500 text-[14px] sm:text-[15px] mb-6 sm:mb-8 leading-relaxed">
-                                    การโหลดโปรไฟล์จำลองจะ <strong>ล้างข้อมูลปัจจุบัน</strong> และแทนที่ด้วยข้อมูลใหม่ทั้งหมด
-                                </p>
-                                <div className="flex gap-3 sm:gap-4">
-                                    <button onClick={() => setShowPresetConfirm({show: false, type: null})} className="flex-1 py-3 sm:py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl sm:rounded-2xl font-bold transition-all">ยกเลิก</button>
-                                    <button onClick={() => applyPreset(showPresetConfirm.type)} className="flex-1 py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl sm:rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/30">ดำเนินการ</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {showClearConfirm && (
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[250] flex items-center justify-center p-4 fade-in-up">
-                            <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 md:p-10 max-w-sm w-full shadow-2xl border border-white/20">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6 shadow-inner">
-                                    <IconTrash className="w-8 h-8 sm:w-10 sm:h-10" />
-                                </div>
-                                <h3 className="text-xl sm:text-2xl font-bold text-center text-slate-900 mb-2 sm:mb-3">ยืนยันการล้างข้อมูล?</h3>
-                                <p className="text-center text-slate-500 text-[14px] sm:text-[15px] mb-6 sm:mb-8 leading-relaxed">ข้อมูลที่คุณกรอกจะถูกลบทั้งหมด (แผนที่บันทึกไว้จะไม่หายไป)</p>
-                                <div className="flex gap-3 sm:gap-4">
-                                    <button onClick={() => setShowClearConfirm(false)} className="flex-1 py-3 sm:py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl sm:rounded-2xl font-bold transition-all">ยกเลิก</button>
-                                    <button onClick={handleClearData} className="flex-1 py-3 sm:py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl sm:rounded-2xl font-bold transition-all shadow-lg shadow-rose-600/30">ล้างข้อมูล</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Premium Header */}
-                    <div className="premium-glass-card rounded-[1.5rem] sm:rounded-[2.5rem] p-5 sm:p-8 flex flex-col md:flex-row items-center justify-between z-40 relative">
-                        <div className="flex items-center flex-col md:flex-row text-center md:text-left">
-                            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 text-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl md:mr-6 shadow-lg shadow-indigo-500/30 mb-3 sm:mb-4 md:mb-0 transform transition-transform hover:scale-105">
-                                <IconWallet className="w-8 h-8 sm:w-10 sm:h-10" />
+                    {/* Header */}
+                    <header className="glass rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="relative shrink-0">
+                                <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-50 rounded-2xl" />
+                                <div className="relative bg-gradient-to-br from-indigo-500 to-teal-500 text-white p-3 rounded-2xl"><IconCube className="w-7 h-7 sm:w-8 sm:h-8" /></div>
                             </div>
                             <div>
-                                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-700 tracking-tight">Tax Planner Pro</h1>
-                                <p className="text-slate-500 text-[13px] sm:text-[15px] mt-1 sm:mt-2 font-medium flex items-center justify-center md:justify-start">
-                                    <IconBadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 text-emerald-500" /> เครื่องมือวางแผนภาษีอัจฉริยะ (อัปเดต ภ.ง.ด.90)
-                                </p>
+                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Tax Planner <span className="bg-gradient-to-r from-indigo-300 to-teal-300 bg-clip-text text-transparent">3D</span></h1>
+                                <p className="text-slate-400 text-xs sm:text-sm">วางแผนภาษีเงินได้บุคคลธรรมดา ภ.ง.ด.90/91 แบบเห็นภาพ</p>
                             </div>
                         </div>
-                        <button onClick={() => setShowClearConfirm(true)} className="mt-4 sm:mt-6 md:mt-0 flex items-center text-xs sm:text-sm font-bold text-slate-500 bg-white hover:bg-rose-50 hover:text-rose-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-slate-200 hover:border-rose-200 transition-all shadow-sm">
-                            <IconTrash className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> ล้างฟอร์ม
-                        </button>
-                    </div>
-
-                    {}
-                    {/* Smart Presets */}
-                    <div className="flex flex-wrap gap-2 sm:gap-3 z-40 relative">
-                        <span className="w-full sm:w-auto text-[13px] sm:text-[14px] font-bold text-slate-400/80 uppercase tracking-widest flex items-center mb-1 sm:mb-0 sm:mr-2">
-                            <IconLightbulb className="w-4 h-4 mr-1.5" /> จำลองโปรไฟล์:
-                        </span>
-                        <button onClick={() => setShowPresetConfirm({show: true, type: 'office_basic'})} className="px-3 sm:px-4 py-2 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all border border-indigo-100/50 backdrop-blur-sm">🏢 พนักงานออฟฟิศ</button>
-                        <button onClick={() => setShowPresetConfirm({show: true, type: 'investor_max'})} className="px-3 sm:px-4 py-2 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all border border-emerald-100/50 backdrop-blur-sm">📈 สายลงทุนเต็มแม็กซ์</button>
-                        <button onClick={() => setShowPresetConfirm({show: true, type: 'freelance'})} className="px-3 sm:px-4 py-2 bg-amber-50/80 hover:bg-amber-100 text-amber-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all border border-amber-100/50 backdrop-blur-sm">💻 ฟรีแลนซ์ 40(2)</button>
-                    </div>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-8 xl:gap-10 items-start">
-                        
-                        {/* LEFT COLUMN: Inputs */}
-                        <div className="xl:col-span-7 space-y-6 sm:space-y-8 z-30">
-                            
-                            {/* 1. Income */}
-                            <CleanCard>
-                                <h2 className="text-lg sm:text-xl font-extrabold mb-5 sm:mb-7 text-slate-800 flex items-center pb-4 border-b border-slate-100/80 tracking-tight">
-                                    <span className="bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl mr-3 sm:mr-4 shadow-sm border border-blue-100"><IconWallet className="w-5 h-5 sm:w-6 h-6" /></span>
-                                    1. หมวดรายได้ (เงินได้พึงประเมิน)
-                                </h2>
-                                
-                                <div className="bg-slate-50/50 p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] border border-slate-100 mb-5 sm:mb-6">
-                                    <h3 className="font-extrabold text-slate-700 mb-4 sm:mb-5 text-xs sm:text-sm uppercase tracking-widest flex items-center"><span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>รายได้จากงานประจำ 40(1)</h3>
-                                    <NumberInput label="เงินเดือน (ยอดต่อเดือน)" value={salary} onChange={setSalary} maxNote="ระบบจะนำไปคูณ 12 เดือนให้อัตโนมัติ" />
-                                    <NumberInput label="โบนัส (ยอดรวมทั้งปี)" value={bonus} onChange={setBonus} />
-                                </div>
-
-                                <div className="bg-slate-50/50 p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] border border-slate-100 mb-5 sm:mb-6">
-                                    <h3 className="font-extrabold text-slate-700 mb-4 sm:mb-5 text-xs sm:text-sm uppercase tracking-widest flex items-center"><span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>รายได้อื่นๆ (ภ.ง.ด.90)</h3>
-                                    <div className="mb-5 sm:mb-6">
-                                        <label className="block text-[14px] sm:text-[15px] font-bold text-slate-700 mb-2 sm:mb-2.5">ประเภทของรายได้อื่นๆ</label>
-                                        <div className="relative group">
-                                            <select className="w-full p-3.5 sm:p-4 input-premium rounded-xl sm:rounded-2xl font-bold text-slate-800 appearance-none cursor-pointer text-sm sm:text-base" value={otherIncomeType} onChange={(e) => setOtherIncomeType(e.target.value)}>
-                                                <option value="402">40(2) ฟรีแลนซ์, รับจ้างอิสระ (หักเหมา 50%)</option>
-                                                <option value="408">40(8) ขายออนไลน์, ธุรกิจ (หักเหมา 60%)</option>
-                                                <option value="405">40(5) ค่าเช่าทรัพย์สิน (หักเหมา 30%)</option>
-                                            </select>
-                                            <div className="absolute inset-y-0 right-4 sm:right-5 flex items-center pointer-events-none text-slate-400 group-hover:text-indigo-500 transition-colors">
-                                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <NumberInput label="ยอดรายได้อื่นๆ รวมทั้งปี" value={otherIncome} onChange={setOtherIncome} maxNote="ระบบจะคำนวณหักค่าใช้จ่ายตามประเภทที่เลือกอัตโนมัติ" />
-                                </div>
-
-                                <div className="bg-rose-50/30 p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] border border-rose-100/50">
-                                    <NumberInput label="ภาษีที่ถูกหัก ณ ที่จ่ายแล้ว" value={withheldTax} onChange={setWithheldTax} icon={IconAlertCircle} maxNote="ยอดรวมภาษีที่ถูกหักนำส่งไปแล้ว (ดูจากใบ 50 ทวิ)" />
-                                </div>
-                            </CleanCard>
-
-                            {/* 2. Family */}
-                            <CleanCard>
-                                <h2 className="text-lg sm:text-xl font-extrabold mb-5 sm:mb-7 text-slate-800 flex items-center pb-4 border-b border-slate-100/80 tracking-tight">
-                                    <span className="bg-gradient-to-br from-purple-100 to-purple-50 text-purple-600 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl mr-3 sm:mr-4 shadow-sm border border-purple-100"><IconUsers className="w-5 h-5 sm:w-6 h-6" /></span>
-                                    2. ครอบครัวและผู้พิการ
-                                </h2>
-                                <div className="mb-6 sm:mb-8">
-                                    <label className="block text-[14px] sm:text-[15px] font-bold text-slate-700 mb-2 sm:mb-2.5">สถานภาพ</label>
-                                    <div className="relative group">
-                                        <select className="w-full p-3.5 sm:p-4 input-premium rounded-xl sm:rounded-2xl font-bold text-slate-800 appearance-none cursor-pointer text-sm sm:text-base" value={status} onChange={(e) => setStatus(e.target.value)}>
-                                            <option value="single">โสด / สมรส (ต่างฝ่ายต่างยื่น)</option>
-                                            <option value="married_no_income">สมรส (คู่สมรสไม่มีรายได้)</option>
-                                        </select>
-                                        <div className="absolute inset-y-0 right-4 sm:right-5 flex items-center pointer-events-none text-slate-400 group-hover:text-indigo-500 transition-colors">
-                                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                    <NumberInput label="จำนวนบุตร (เกิดก่อนปี 61)" value={children} onChange={setChildren} unit="คน" maxNote="หักลดหย่อนได้ 30,000 บาทต่อคน" />
-                                    <NumberInput label="บุตรคนที่ 2 ขึ้นไป (เกิด 61+)" value={children2018} onChange={setChildren2018} unit="คน" maxNote="หักลดหย่อนได้เพิ่มเป็น 60,000 บาทต่อคน" />
-                                    <NumberInput label="บิดามารดา (อายุ 60+)" value={parents} onChange={setParents} unit="คน" maxNote="หักลดหย่อนได้ 30,000 บาทต่อคน (สูงสุด 4 คน)" />
-                                    <NumberInput label="เบี้ยประกันสุขภาพพ่อแม่" value={parentsHealthInsurance} onChange={setParentsHealthInsurance} maxNote="หักได้ตามจริง รวมกันสูงสุดไม่เกิน 15,000 บาท" />
-                                    <div className="sm:col-span-2 pt-6 sm:pt-7 border-t border-slate-100/80 mt-2 sm:mt-3">
-                                        <NumberInput label="อุปการะคนพิการ / ทุพพลภาพ" value={disabledPersons} onChange={setDisabledPersons} unit="คน" icon={IconWheelchair} maxNote="หักลดหย่อนได้ 60,000 บาทต่อคน (ต้องมีชื่อเป็นผู้ดูแลในบัตร)" />
-                                    </div>
-                                </div>
-                            </CleanCard>
-
-                            {/* 3. Investments */}
-                            <CleanCard>
-                                <h2 className="text-lg sm:text-xl font-extrabold mb-5 sm:mb-7 text-slate-800 flex items-center pb-4 border-b border-slate-100/80 tracking-tight">
-                                    <span className="bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl mr-3 sm:mr-4 shadow-sm border border-emerald-100"><IconShield className="w-5 h-5 sm:w-6 h-6" /></span>
-                                    3. ประกันและการลงทุนเพื่ออนาคต
-                                </h2>
-                                
-                                <div className="mb-8 sm:mb-10">
-                                    <h3 className="text-[14px] sm:text-[15px] font-extrabold text-slate-700 mb-4 sm:mb-6 flex items-center uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-blue-500 mr-2 sm:mr-3"></span>กลุ่มประกันชีวิตและสุขภาพ</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                        <NumberInput label="ประกันสังคม (ทั้งปี)" value={socialSecurity} onChange={setSocialSecurity} maxNote="สูงสุดไม่เกิน 9,000 บาทต่อปี" />
-                                        <div className="hidden sm:block"></div>
-                                        <NumberInput label="เบี้ยประกันชีวิตทั่วไป" value={lifeInsurance} onChange={setLifeInsurance} maxNote="รวมกับประกันสุขภาพตนเองสูงสุดไม่เกิน 100,000 บาท" />
-                                        <NumberInput label="เบี้ยประกันสุขภาพตนเอง" value={healthInsurance} onChange={setHealthInsurance} maxNote="สูงสุดไม่เกิน 25,000 บาท (เมื่อรวมกับประกันชีวิตต้องไม่เกิน 100,000)" />
-                                    </div>
-                                </div>
-
-                                <div className="mb-8 sm:mb-10 pt-8 sm:pt-10 border-t border-slate-100/80">
-                                    <h3 className="text-[14px] sm:text-[15px] font-extrabold text-slate-700 mb-2 flex items-center uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-teal-500 mr-2 sm:mr-3"></span>กลุ่มออมเพื่อการเกษียณอายุ</h3>
-                                    <p className="text-[11px] sm:text-[12px] text-slate-500 mb-5 sm:mb-7 bg-slate-50 p-2.5 sm:p-3 rounded-lg sm:rounded-xl border border-slate-100 inline-block font-medium">เพดานเงินลงทุนหมวดนี้ทั้งหมดรวมกันต้อง <strong className="text-rose-500">ไม่เกิน 500,000 บาท</strong></p>
-                                    
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                        <NumberInput label="PVD / กบข. / กอช." value={providentFund} onChange={setProvidentFund} maxNote="สูงสุดไม่เกิน 15% ของค่าจ้าง (เงินเดือน+โบนัส) และไม่เกิน 500,000 บาท" />
-                                        <NumberInput label="เบี้ยประกันชีวิตแบบบำนาญ" value={pensionInsurance} onChange={setPensionInsurance} maxNote="สูงสุดไม่เกิน 15% ของรายได้ และไม่เกิน 200,000 บาท" />
-                                        <NumberInput label="กองทุน SSF" value={ssf} onChange={setSsf} maxNote="สูงสุดไม่เกิน 30% ของรายได้ และไม่เกิน 200,000 บาท" />
-                                        <NumberInput label="กองทุน RMF" value={rmf} onChange={setRmf} maxNote="สูงสุดไม่เกิน 30% ของรายได้ และไม่เกิน 500,000 บาท" />
-                                    </div>
-                                </div>
-
-                                <div className="pt-8 sm:pt-10 border-t border-slate-100/80">
-                                    <h3 className="text-[14px] sm:text-[15px] font-extrabold text-slate-700 mb-4 sm:mb-6 flex items-center uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-orange-400 mr-2 sm:mr-3"></span>กองทุนเพื่อความยั่งยืน</h3>
-                                    <NumberInput label="กองทุน Thai ESG" value={tesg} onChange={setTesg} maxNote="วงเงินพิเศษ! หักได้สูงสุด 30% ของรายได้ แต่ไม่เกิน 300,000 บาท" />
-                                </div>
-                            </CleanCard>
-
-                            {/* 4 & 5. Real Estate & Donation */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-                                <CleanCard className="bg-gradient-to-br from-orange-50/30 to-white/90">
-                                    <h2 className="text-[14px] sm:text-[15px] font-extrabold mb-4 sm:mb-6 text-slate-800 flex items-center uppercase tracking-widest"><IconHome className="w-4 h-4 sm:w-5 h-5 text-orange-500 mr-2 sm:mr-3" /> 4. อสังหาฯ & รัฐ</h2>
-                                    <NumberInput label="ดอกเบี้ยกู้บ้าน" value={mortgageInterest} onChange={setMortgageInterest} maxNote="สูงสุดไม่เกิน 100,000 บาท" />
-                                    <NumberInput label="ช้อปดีมีคืน / มาตรการรัฐ" value={shoppingStimulus} onChange={setShoppingStimulus} maxNote="สูงสุดไม่เกิน 50,000 บาท" />
-                                </CleanCard>
-                                <CleanCard className="bg-gradient-to-br from-pink-50/30 to-white/90">
-                                    <h2 className="text-[14px] sm:text-[15px] font-extrabold mb-4 sm:mb-6 text-slate-800 flex items-center uppercase tracking-widest"><IconHeartHandshake className="w-4 h-4 sm:w-5 h-5 text-pink-500 mr-2 sm:mr-3" /> 5. เงินบริจาค</h2>
-                                    <NumberInput label="บริจาค สนับสนุนการศึกษา (x2)" value={doubleDonations} onChange={setDoubleDonations} maxNote="ระบบจะคูณ 2 ให้อัตโนมัติ (หักได้สูงสุด 10% ของเงินได้หลังลดหย่อน)" />
-                                    <NumberInput label="บริจาคทั่วไป (มูลนิธิ, วัด)" value={donations} onChange={setDonations} maxNote="สูงสุดไม่เกิน 10% ของเงินได้สุทธิที่เหลืออยู่" />
-                                </CleanCard>
-                            </div>
-                            
-                            {/* Local Save */}
-                            <div className="premium-glass-card rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 bg-indigo-50/20">
-                                <h2 className="text-sm sm:text-base font-extrabold mb-4 text-slate-800 flex items-center">
-                                    <IconSave className="w-4 h-4 sm:w-5 h-5 text-indigo-500 mr-2 sm:mr-2.5" /> บันทึกแผนเพื่อเปรียบเทียบ (ในเครื่อง)
-                                </h2>
-                                <form onSubmit={handleSavePlan} className="flex flex-col sm:flex-row gap-3">
-                                    <input type="text" value={planName} onChange={(e) => setPlanName(e.target.value)} placeholder="ตั้งชื่อแผนที่ต้องการบันทึก..." className="flex-1 p-3.5 sm:p-4 input-premium rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base text-slate-800" />
-                                    <button type="submit" className="bg-slate-900 hover:bg-slate-800 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                                        บันทึกแผน
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                            <div className="flex bg-slate-950/60 border border-slate-700/60 rounded-xl p-1" role="tablist" aria-label="ปีภาษี">
+                                {Object.keys(TE.YEAR_RULES).map((y) => (
+                                    <button key={y} role="tab" aria-selected={+y === year} onClick={() => set('year')(+y)}
+                                        className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-bold transition-all ${+y === year ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}>
+                                        ปีภาษี {y}
                                     </button>
-                                </form>
-                                {savedPlans.length > 0 && (
-                                    <div className="mt-6 sm:mt-8 space-y-3">
-                                        <p className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-widest mb-3 sm:mb-4">แผนที่บันทึกไว้ ({savedPlans.length})</p>
-                                        {savedPlans.map(plan => (
-                                            <div key={plan.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/80 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-100 transition-all shadow-sm hover:shadow-md gap-3 group">
-                                                <span className="font-extrabold text-slate-700 text-sm sm:text-[15px] flex items-center"><IconFolder className="w-4 h-4 sm:w-5 h-5 text-indigo-400 mr-2.5 sm:mr-3 flex-shrink-0 group-hover:text-indigo-500 transition-colors" /> <span className="truncate">{plan.name}</span></span>
-                                                <div className="flex gap-2 self-end sm:self-auto">
-                                                    <button onClick={() => loadPlan(plan)} className="text-xs sm:text-sm bg-indigo-50 text-indigo-700 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold hover:bg-indigo-100 transition-colors shrink-0">เรียกดู</button>
-                                                    <button onClick={() => deletePlan(plan.id, plan.name)} className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 p-2 sm:p-2.5 rounded-lg sm:rounded-xl transition-colors shrink-0"><IconTrash className="w-4 h-4 sm:w-5 h-5" /></button>
-                                                </div>
+                                ))}
+                            </div>
+                            <button onClick={() => setModal('clear')} className="flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-rose-300 border border-slate-700/60 hover:border-rose-500/40 px-4 py-2.5 rounded-xl transition-colors">
+                                <IconTrash className="w-4 h-4" /> ล้างฟอร์ม
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Presets */}
+                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+                        <span className="shrink-0 text-xs font-bold text-slate-500 uppercase tracking-widest self-center mr-1">จำลองโปรไฟล์</span>
+                        {Object.entries(PRESETS).map(([k, p]) => (
+                            <button key={k} onClick={() => setModal({ preset: k })} className="shrink-0 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800/70 hover:bg-indigo-600/30 text-slate-200 border border-slate-700/60 hover:border-indigo-400/40 transition-colors">{p.label}</button>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 sm:gap-7 items-start">
+                        {/* ============ LEFT: Inputs ============ */}
+                        <div className="xl:col-span-7 space-y-5 sm:space-y-6">
+                            <Section icon={IconWallet} title="1. รายได้ทั้งปี" subtitle="เงินได้พึงประเมินแยกตามประเภท — ระบบหักค่าใช้จ่ายเหมาให้อัตโนมัติ" accent="bg-sky-500/15 text-sky-300">
+                                <NumberInput label="เงินเดือน (ต่อเดือน) · 40(1)" value={form.salary} onChange={set('salary')} note={`x12 = ${fmt(calc.income.inc401 - (Number(form.bonus) || 0))} บาท/ปี`} />
+                                <NumberInput label="โบนัส / เงินพิเศษ (ทั้งปี) · 40(1)" value={form.bonus} onChange={set('bonus')} />
+                                <NumberInput label="ฟรีแลนซ์ / รับจ้างอิสระ · 40(2)" value={form.income402} onChange={set('income402')} note="หักเหมา 50% รวมกับเงินเดือนไม่เกิน 100,000" />
+                                <NumberInput label="ขายของ / ธุรกิจ · 40(8)" value={form.income408} onChange={set('income408')} note="หักเหมา 60% (ประเภททั่วไป)" />
+                                <NumberInput label="ค่าเช่าบ้าน/อาคาร · 40(5)" value={form.income405} onChange={set('income405')} note="หักเหมา 30%" />
+                                <NumberInput label="ภาษีถูกหัก ณ ที่จ่ายแล้ว" value={form.withheldTax} onChange={set('withheldTax')} note="ยอดรวมจากใบ 50 ทวิ ทุกฉบับ" />
+                                <div className="sm:col-span-2 grid grid-cols-3 gap-2 text-center">
+                                    {[['รายได้รวม', calc.income.totalIncome, 'text-white'], ['หักค่าใช้จ่าย', calc.expenses.total, 'text-rose-300'], ['เหลือ', calc.income.totalIncome - calc.expenses.total, 'text-sky-300']].map(([l, v, c]) => (
+                                        <div key={l} className="bg-slate-950/40 rounded-xl py-2.5 px-1 border border-slate-800">
+                                            <div className="text-[10.5px] text-slate-500 font-semibold">{l}</div>
+                                            <div className={`font-bold text-sm sm:text-base ${c}`}>{fmt(v)}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </Section>
+
+                            <Section icon={IconUsers} title="2. ครอบครัว" subtitle="ลดหย่อนส่วนตัว 60,000 บาท ได้อัตโนมัติ" accent="bg-violet-500/15 text-violet-300">
+                                <div className="sm:col-span-2">
+                                    <Select label="สถานภาพ" value={form.status} onChange={set('status')}>
+                                        <option value="single">โสด / สมรสแยกยื่น / คู่สมรสมีเงินได้</option>
+                                        <option value="married_no_income">สมรส (คู่สมรสไม่มีเงินได้)</option>
+                                    </Select>
+                                </div>
+                                <NumberInput label="บุตรคนแรก / บุตรเกิดก่อนปี 2561" value={form.children} onChange={set('children')} unit="คน" max={20} note="30,000 บาท/คน" />
+                                <NumberInput label="บุตรคนที่ 2+ ที่เกิดตั้งแต่ปี 2561" value={form.children2018} onChange={set('children2018')} unit="คน" max={20} note="60,000 บาท/คน" />
+                                <NumberInput label="บิดามารดาอายุ 60+ (รายได้ ≤ 30,000)" value={form.parents} onChange={set('parents')} unit="คน" max={married ? 4 : 2} note={`30,000 บาท/คน · สูงสุด ${married ? '4 คน (รวมพ่อแม่คู่สมรส)' : '2 คน'}`} />
+                                <NumberInput label="เบี้ยประกันสุขภาพบิดามารดา" value={form.parentsHealthInsurance} onChange={set('parentsHealthInsurance')} cap={15000} used={allowance('parentsHealth')} />
+                                <NumberInput label="อุปการะผู้พิการ / ทุพพลภาพ" value={form.disabledPersons} onChange={set('disabledPersons')} unit="คน" max={20} note="60,000 บาท/คน (มีชื่อเป็นผู้ดูแลในบัตร)" />
+                                <NumberInput label="ค่าฝากครรภ์และคลอดบุตร" value={form.prenatal} onChange={set('prenatal')} cap={60000} used={allowance('prenatal')} />
+                            </Section>
+
+                            <Section icon={IconShield} title="3. ประกัน" subtitle="ประกันชีวิต + สุขภาพตนเอง รวมกันไม่เกิน 100,000" accent="bg-blue-500/15 text-blue-300">
+                                <NumberInput label="ประกันสังคม (ทั้งปี)" value={form.socialSecurity} onChange={set('socialSecurity')} cap={R.sso} used={allowance('sso')} note={`ปี ${year} สูงสุด ${fmt(R.sso)} บาท`} />
+                                <NumberInput label="เบี้ยประกันชีวิต" value={form.lifeInsurance} onChange={set('lifeInsurance')} cap={100000} used={calc.usage.lifeTotal} />
+                                <NumberInput label="เบี้ยประกันสุขภาพตนเอง" value={form.healthInsurance} onChange={set('healthInsurance')} note="ไม่เกิน 25,000 (นับรวมในเพดาน 100,000)" />
+                                <NumberInput label="เบี้ยประกันชีวิตคู่สมรส" value={form.spouseLife} onChange={set('spouseLife')} disabled={!married} cap={10000} used={allowance('spouseLife')} note={married ? 'สูงสุด 10,000' : 'ใช้ได้เฉพาะคู่สมรสไม่มีเงินได้'} />
+                            </Section>
+
+                            <Section icon={IconPiggy} title="4. ออมเพื่อเกษียณ" subtitle="PVD + RMF + ประกันบำนาญ รวมกันไม่เกิน 500,000" accent="bg-teal-500/15 text-teal-300"
+                                badge={<Pill tone={calc.usage.retire >= 500000 ? 'emerald' : 'slate'}>ใช้ไป {fmt(calc.usage.retire)} / 500,000</Pill>}>
+                                <NumberInput label="PVD / กบข. / กอช." value={form.providentFund} onChange={set('providentFund')} cap={Math.min(calc.income.inc401 * 0.15, 500000)} used={Math.min(Number(form.providentFund) || 0, calc.income.inc401 * 0.15, 500000)} note="ไม่เกิน 15% ของค่าจ้าง" />
+                                <NumberInput label="กองทุน RMF" value={form.rmf} onChange={set('rmf')} cap={calc.usage.rmfCap} used={calc.usage.rmf} note="30% ของรายได้ ไม่เกิน 500,000" />
+                                <NumberInput label="เบี้ยประกันบำนาญ" value={form.pensionInsurance} onChange={set('pensionInsurance')} note="15% ของรายได้ ไม่เกิน 200,000 · ถ้าโควตาประกันชีวิตยังว่าง ระบบจะใช้ส่วนนั้นก่อน" />
+                                <div className="text-xs text-slate-400 bg-slate-950/40 border border-slate-800 rounded-xl p-3 leading-relaxed self-end">
+                                    <b className="text-amber-300">SSF</b> ไม่ได้สิทธิลดหย่อนแล้วตั้งแต่ปีภาษี 2568 เลยไม่มีช่องให้กรอก
+                                </div>
+                            </Section>
+
+                            <Section icon={IconSprout} title="5. กองทุน ESG" subtitle="เพดานแยกจากกลุ่มเกษียณ" accent="bg-amber-500/15 text-amber-300">
+                                <NumberInput label="กองทุน Thai ESG" value={form.tesg} onChange={set('tesg')} cap={calc.usage.tesgCap} used={calc.usage.tesg} note={`30% ของรายได้ ไม่เกิน ${fmt(R.thaiEsg)}`} />
+                                <NumberInput label="ThaiESGX (สับเปลี่ยนจาก LTF)" value={form.esgxLtf} onChange={set('esgxLtf')} cap={R.esgxLtf} used={allowance('esgxLtf')} note={`ปี ${year} สูงสุด ${fmt(R.esgxLtf)}`} />
+                                {R.esgxNew > 0 && (
+                                    <NumberInput label="ThaiESGX (เงินลงทุนใหม่)" value={form.esgxNew} onChange={set('esgxNew')} cap={R.esgxNew} used={allowance('esgxNew')} note="เฉพาะที่ซื้อช่วง พ.ค.–มิ.ย. 2568" />
+                                )}
+                            </Section>
+
+                            <Section icon={IconHome} title="6. บ้าน & มาตรการรัฐ" accent="bg-orange-500/15 text-orange-300">
+                                <NumberInput label="ดอกเบี้ยเงินกู้ซื้อบ้าน" value={form.mortgageInterest} onChange={set('mortgageInterest')} cap={100000} used={allowance('mortgage')} />
+                                <NumberInput label="มาตรการกระตุ้น (เช่น Easy E-Receipt)" value={form.shoppingStimulus} onChange={set('shoppingStimulus')} cap={R.stimulus} used={allowance('stimulus')} note="กรอกเมื่อปีนั้นมีมาตรการ และมี e-Tax Invoice" />
+                                {R.homeBuild > 0 && (
+                                    <NumberInput label="ค่าก่อสร้างบ้านใหม่ (ยอดตามสัญญา)" value={form.homeBuildCost} onChange={set('homeBuildCost')} note={`ลดหย่อน 10,000 ต่อทุก 1 ล้าน สูงสุด 100,000 → ได้ ${fmt(allowance('homeBuild'))}`} />
+                                )}
+                                <NumberInput label="บริจาคพรรคการเมือง" value={form.politicalDonation} onChange={set('politicalDonation')} cap={10000} used={allowance('political')} />
+                            </Section>
+
+                            <Section icon={IconHeart} title="7. เงินบริจาค" subtitle="แต่ละส่วนไม่เกิน 10% ของเงินได้หลังหักลดหย่อน" accent="bg-pink-500/15 text-pink-300">
+                                <NumberInput label="การศึกษา / กีฬา / รพ.รัฐ (หักได้ 2 เท่า)" value={form.doubleDonations} onChange={set('doubleDonations')} note={allowance('doubleDon') ? `ใช้สิทธิได้ ${fmt(allowance('doubleDon'))}` : undefined} />
+                                <NumberInput label="บริจาคทั่วไป (มูลนิธิ, วัด)" value={form.donations} onChange={set('donations')} note={allowance('genDon') ? `ใช้สิทธิได้ ${fmt(allowance('genDon'))}` : undefined} />
+                            </Section>
+                        </div>
+
+                        {/* ============ RIGHT: Results ============ */}
+                        <aside className="xl:col-span-5 space-y-5 sm:space-y-6 xl:sticky xl:top-6" id="results">
+                            {/* Hero */}
+                            <div className={`glass rounded-3xl overflow-hidden relative bg-gradient-to-br ${heroBg} transition-colors duration-700`}>
+                                <div className="p-5 sm:p-7">
+                                    <div className="flex items-center justify-between">
+                                        <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-white/90 bg-white/10 border border-white/10 px-3 py-1.5 rounded-full">
+                                            <span className={`w-2 h-2 rounded-full animate-pulse ${tone === 'refund' ? 'bg-emerald-300' : tone === 'pay' ? 'bg-rose-300' : 'bg-indigo-300'}`} />{heroLabel}
+                                        </span>
+                                        <span className="text-[11px] text-white/50 font-medium">{R.label}</span>
+                                    </div>
+                                    <div className="text-5xl sm:text-6xl font-black text-white tracking-tight mt-3 tabular-nums">{fmt(Math.abs(calc.balance))}<span className="text-lg sm:text-xl text-white/50 font-bold ml-2">บาท</span></div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
+                                        {[
+                                            ['ภาษีทั้งปี', fmt(calc.tax)],
+                                            ['หักไว้แล้ว', fmt(calc.wht)],
+                                            ['อัตราเฉลี่ย', pct(calc.effectiveRate)],
+                                            ['อัตราขั้นสูงสุด', `${calc.marginalRate}%`],
+                                        ].map(([l, v]) => (
+                                            <div key={l} className="bg-black/25 rounded-xl px-3 py-2.5 border border-white/5">
+                                                <div className="text-[10.5px] text-white/55 font-semibold">{l}</div>
+                                                <div className="text-white font-bold tabular-nums">{v}</div>
                                             </div>
                                         ))}
                                     </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {}
-                        {/* RIGHT COLUMN: Premium Summary Panel */}
-                        <div className="xl:col-span-5 space-y-6 sm:space-y-8 xl:sticky top-6 sm:top-10 z-30">
-                            
-                            {/* Premium Hero Summary Card */}
-                            <div className="rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] sm:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] relative">
-                                <div className={`absolute inset-0 transition-opacity duration-1000 ${calculation.isRefund ? 'opacity-0' : (calculation.taxDifference > 0 ? 'opacity-0' : 'opacity-100')} bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950`}></div>
-                                <div className={`absolute inset-0 transition-opacity duration-1000 ${calculation.isRefund ? 'opacity-100' : 'opacity-0'} bg-gradient-to-br from-teal-900 via-emerald-800 to-emerald-950`}></div>
-                                <div className={`absolute inset-0 transition-opacity duration-1000 ${calculation.taxDifference > 0 && !calculation.isRefund ? 'opacity-100' : 'opacity-0'} bg-gradient-to-br from-rose-900 via-rose-800 to-red-950`}></div>
-                                
-                                {/* Abstract glow effects */}
-                                <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-white/10 rounded-full blur-[60px] sm:blur-[80px] -mr-16 sm:-mr-20 -mt-16 sm:-mt-20"></div>
-                                <div className="absolute bottom-0 left-0 w-32 h-32 sm:w-40 sm:h-40 bg-white/5 rounded-full blur-[40px] sm:blur-[50px] -ml-8 sm:-ml-10 -mb-8 sm:-mb-10"></div>
-                                
-                                <div className="p-6 sm:p-8 md:p-10 relative z-10">
-                                    <div className="flex justify-between items-start mb-3 sm:mb-4">
-                                        <div className="bg-white/10 backdrop-blur-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/10 inline-flex items-center">
-                                            <div className={`w-2 h-2 rounded-full mr-2 sm:mr-2.5 ${calculation.isRefund ? 'bg-emerald-400' : (calculation.taxDifference > 0 ? 'bg-rose-400' : 'bg-indigo-400')} animate-pulse`}></div>
-                                            <span className="text-white/90 text-xs sm:text-sm font-bold tracking-wide">
-                                                {calculation.isRefund ? 'ได้รับเงินคืน' : (calculation.taxDifference > 0 ? 'ต้องชำระเพิ่ม' : 'ยอดภาษีสุทธิ')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <h2 className="text-4xl sm:text-5xl md:text-[4rem] font-black tracking-tighter text-white mb-2 leading-tight drop-shadow-md">
-                                        {formatMoney(calculation.taxDifference)}
-                                    </h2>
-                                    
-                                    {calculation.totalIncome > 0 && (
-                                        <div className="text-white/60 font-medium text-xs sm:text-sm mb-5 sm:mb-6 flex items-center">
-                                            <IconTrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                                            อัตราภาษีเฉลี่ยจริง (Effective Rate) <strong className="text-white ml-1.5 sm:ml-2 text-sm sm:text-base">{calculation.effectiveTaxRate}%</strong>
-                                        </div>
+                                    {calc.minTaxApplied && (
+                                        <p className="mt-3 text-xs text-amber-200 bg-amber-500/10 border border-amber-400/20 rounded-xl p-2.5">⚠️ ใช้ภาษีขั้นต่ำ 0.5% ของเงินได้ 40(2)–40(8) ตาม ม.48(2) เพราะสูงกว่าวิธีขั้นบันได</p>
                                     )}
-
-                                    {calculation.tax > 0 && (
-                                        <div className="mt-2 bg-black/20 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 flex items-center justify-between">
-                                            <span className="text-white/70 text-xs sm:text-sm font-medium">ฐานภาษีสูงสุดที่โดนคำนวณ:</span>
-                                            <strong className="text-white text-lg sm:text-xl">{calculation.currentBracketRate}%</strong>
-                                        </div>
-                                    )}
-
-                                    <button onClick={() => setShowBreakdown(true)} className="mt-6 sm:mt-8 w-full bg-white text-slate-900 hover:bg-slate-100 px-5 sm:px-6 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black text-sm sm:text-[15px] transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center group">
-                                        <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-slate-700 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                        ดูรายละเอียดโครงสร้างภาษี
-                                    </button>
                                 </div>
                             </div>
 
-                            {/* Alert Next Bracket Warning */}
-                            {calculation.nextBracket.gap > 0 && calculation.nextBracket.gap <= 100000 && calculation.tax > 0 && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-[1.5rem] p-5 sm:p-6 shadow-sm flex items-start fade-in-up">
-                                    <div className="bg-amber-100 text-amber-600 p-2 sm:p-2.5 rounded-xl mr-3 sm:mr-4 shrink-0"><IconInfo className="w-5 h-5 sm:w-6 sm:h-6" /></div>
-                                    <div>
-                                        <h4 className="font-extrabold text-amber-900 text-sm sm:text-base mb-1">⚠️ คำเตือนขอบเหวภาษี</h4>
-                                        <p className="text-xs sm:text-sm text-amber-700 font-medium leading-relaxed">
-                                            หากรายได้คุณเพิ่มอีกแค่ <strong className="text-amber-900">{formatMoney(calculation.nextBracket.gap)}</strong> บาท คุณจะหลุดไปเสียภาษีฐาน <strong className="text-rose-600 bg-rose-100 px-1.5 rounded">{calculation.nextBracket.rate}%</strong> แนะนำให้ซื้อลดหย่อนเพิ่มด่วน!
-                                        </p>
+                            {/* 3D Scene */}
+                            <div className="glass rounded-3xl overflow-hidden">
+                                <div className="flex items-center justify-between px-4 sm:px-5 pt-4 gap-2">
+                                    <div className="flex bg-slate-950/60 border border-slate-700/60 rounded-xl p-1 text-xs sm:text-[13px] font-bold" role="tablist" aria-label="มุมมอง 3D">
+                                        {[['stairs', 'ขั้นบันไดภาษี'], ['donut', 'โครงสร้างรายได้'], ['coins', 'กองเหรียญภาษี']].map(([k, l]) => (
+                                            <button key={k} role="tab" aria-selected={mode === k} onClick={() => setMode(k)} className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors ${mode === k ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}>{l}</button>
+                                        ))}
+                                    </div>
+                                    <span className="hidden sm:inline text-[11px] text-slate-500">ลากเพื่อหมุน</span>
+                                </div>
+                                <div className="relative h-[300px] sm:h-[360px]">
+                                    <Scene3D mode={mode} calc={calc} opt={opt} />
+                                </div>
+                                <div className="px-5 pb-4 text-[12px] text-slate-400 leading-relaxed">
+                                    {mode === 'stairs' && <>ความสูงแต่ละขั้น = อัตราภาษี · แท่งสี = เงินได้สุทธิที่ตกอยู่ในขั้นนั้น · ป้ายลอย = ภาษีที่จ่ายในขั้น</>}
+                                    {mode === 'donut' && <>รายได้ทั้งหมดของคุณถูกแบ่งเป็นค่าใช้จ่าย ค่าลดหย่อน ภาษี และส่วนที่เหลือ — ชิ้นยิ่งสูงยิ่งสำคัญ</>}
+                                    {mode === 'coins' && <>เทียบภาษีตอนนี้ กับภาษีถ้าใช้สิทธิลดหย่อนเต็มเพดาน และภาษีที่ถูกหักไว้แล้ว</>}
+                                </div>
+                            </div>
+
+                            {/* Bracket hint */}
+                            {calc.tax > 0 && !calc.minTaxApplied && (
+                                <div className="glass rounded-3xl p-5 flex gap-4 items-start">
+                                    <div className="p-2.5 rounded-2xl bg-amber-500/15 text-amber-300 shrink-0"><IconSpark className="w-5 h-5" /></div>
+                                    <div className="text-sm text-slate-300 leading-relaxed">
+                                        ทุกค่าลดหย่อน <b className="text-white">10,000</b> บาทที่เพิ่ม ช่วยลดภาษีได้ราว <b className="text-emerald-300">{fmt(savingPer10k)}</b> บาท (ขั้น {calc.marginalRate}%)
+                                        {calc.nextBracket && calc.nextBracket.gap <= 100000 && (
+                                            <> · อีก <b className="text-amber-300">{fmt(calc.nextBracket.gap)}</b> บาทจะขึ้นขั้น <b className="text-rose-300">{calc.nextBracket.rate}%</b></>
+                                        )}
+                                        {(() => {
+                                            const cur = calc.brackets[TE.BRACKETS.findIndex((b) => b.rate * 100 === calc.marginalRate)];
+                                            const down = cur ? calc.netIncome - cur.min : 0;
+                                            return calc.marginalRate > 5 && down > 0 && down <= 150000
+                                                ? <> · ลดหย่อนเพิ่มอีก <b className="text-emerald-300">{fmt(down)}</b> บาท จะลงไปอยู่ขั้นต่ำกว่า</>
+                                                : null;
+                                        })()}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Basic Breakdown & Income Chart */}
-                            <CleanCard className="!p-6 sm:!p-8 space-y-4 sm:space-y-5">
-                                <h3 className="font-extrabold text-slate-900 text-base sm:text-lg border-b border-slate-100 pb-3 sm:pb-4 mb-2 sm:mb-4 tracking-tight">สรุปที่มาของภาษี</h3>
-                                
-                                <IncomeDonutChart 
-                                    totalIncome={calculation.totalIncome} 
-                                    expenses={calculation.breakdown.expenses} 
-                                    allowances={calculation.totalAllowances} 
-                                    netIncome={calculation.netIncome} 
-                                />
-
-                                <div className="flex justify-between items-center bg-indigo-50/80 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-indigo-100/50 mt-4 sm:mt-5 shadow-sm">
+                            {/* Optimizer */}
+                            <div className="glass rounded-3xl p-5 sm:p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-300"><IconTarget className="w-5 h-5" /></div>
                                     <div>
-                                        <span className="font-extrabold text-indigo-950 block text-base sm:text-lg">เงินได้สุทธิ</span>
-                                        <span className="text-[11px] sm:text-xs text-indigo-600/80 font-bold tracking-wide">ยอดนี้นำไปคำนวณขั้นบันไดภาษี</span>
-                                    </div>
-                                    <span className="font-black text-2xl sm:text-3xl text-indigo-600">{formatMoney(calculation.netIncome)}</span>
-                                </div>
-                                <div className="pt-4 sm:pt-6 mt-3 sm:mt-4 flex justify-between items-center text-[14px] sm:text-[15px]">
-                                    <span className="text-slate-500 font-bold">ภาษีที่คำนวณได้ตามกฎหมาย</span>
-                                    <span className="font-black text-slate-800 text-base sm:text-lg">{formatMoney(calculation.tax)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[14px] sm:text-[15px]">
-                                    <span className="text-slate-500 font-bold">ภาษีที่บริษัทหักนำส่งไปแล้ว</span>
-                                    <span className="font-black text-blue-500 text-base sm:text-lg">-{formatMoney(calculation.paidWHT)}</span>
-                                </div>
-                            </CleanCard>
-
-                            {/* Advanced: Max Savings Goal */}
-                            <CleanCard className="!p-6 sm:!p-8 bg-emerald-50/50 border-emerald-100">
-                                <div className="flex items-center mb-5 sm:mb-7">
-                                    <div className="bg-emerald-100 p-2 sm:p-3 rounded-xl sm:rounded-2xl text-emerald-600 mr-3 sm:mr-4 shadow-sm"><IconTarget className="w-5 h-5 sm:w-6 h-6" /></div>
-                                    <div>
-                                        <h3 className="font-extrabold text-emerald-950 text-base sm:text-lg tracking-tight">เป้าหมายประหยัดภาษีสูงสุด</h3>
-                                        <p className="text-[12px] sm:text-[13px] text-emerald-700/80 font-semibold">จำลองแผนหากคุณซื้อลดหย่อนเต็มเพดาน</p>
+                                        <h3 className="font-bold text-white">แผนประหยัดภาษีสูงสุด</h3>
+                                        <p className="text-xs text-slate-400">จัดอันดับตามความคุ้ม (ภาษีที่ลดได้ต่อเงินที่ลง)</p>
                                     </div>
                                 </div>
-                                
-                                <div className="bg-white p-5 sm:p-6 rounded-xl sm:rounded-2xl border border-emerald-100 shadow-[0_4px_20px_-5px_rgba(16,185,129,0.15)]">
-                                    <p className="text-[13px] sm:text-[14px] text-slate-500 mb-1 font-bold uppercase tracking-widest">ภาษีต่ำสุดที่คุณทำได้ (Best Case)</p>
-                                    <p className="text-[2rem] sm:text-[2.5rem] font-black text-emerald-600 mb-4 sm:mb-6 leading-none mt-2 drop-shadow-sm">{formatMoney(calculation.lowestPossibleTax)} <span className="text-sm sm:text-base text-emerald-600/70 font-bold ml-1">บาท</span></p>
-                                    
-                                    {calculation.tax > 0 && calculation.investmentNeeded > 0 ? (
-                                        <>
-                                            <div className="flex justify-between text-[11px] sm:text-xs font-extrabold mb-2.5">
-                                                <span className="text-slate-500 uppercase">ประหยัดภาษีได้อีก</span>
-                                                <span className="text-emerald-500 text-[13px] sm:text-sm">{formatMoney(calculation.maxPotentialTaxSavings)} บาท</span>
-                                            </div>
-                                            <div className="w-full h-3 sm:h-4 bg-slate-100 rounded-full overflow-hidden flex mb-2 shadow-inner">
-                                                <div className="bg-emerald-400 h-full transition-all duration-1000" style={{ width: `${(calculation.lowestPossibleTax / calculation.tax) * 100}%` }}></div>
-                                                <div className="bg-indigo-300 h-full transition-all duration-1000" style={{ width: `${(calculation.maxPotentialTaxSavings / calculation.tax) * 100}%` }}></div>
-                                            </div>
-                                            
-                                            <button onClick={() => setShowMaxSavingDetails(!showMaxSavingDetails)} className="mt-5 sm:mt-6 w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-slate-700 transition-colors">
-                                                {showMaxSavingDetails ? 'ซ่อนรายละเอียดโควตา' : 'ดูโควตาการลงทุนที่สามารถซื้อเพิ่มได้'}
-                                            </button>
+                                {opt.plan.length > 0 ? (
+                                    <>
+                                        <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                                            <div className="bg-slate-950/40 rounded-xl p-2.5 border border-slate-800"><div className="text-[10.5px] text-slate-500 font-semibold">ภาษีต่ำสุดที่ทำได้</div><div className="font-bold text-emerald-300">{fmt(opt.bestTax)}</div></div>
+                                            <div className="bg-slate-950/40 rounded-xl p-2.5 border border-slate-800"><div className="text-[10.5px] text-slate-500 font-semibold">ประหยัดได้อีก</div><div className="font-bold text-white">{fmt(opt.totalSaving)}</div></div>
+                                            <div className="bg-slate-950/40 rounded-xl p-2.5 border border-slate-800"><div className="text-[10.5px] text-slate-500 font-semibold">ต้องลงเงินเพิ่ม</div><div className="font-bold text-sky-300">{fmt(opt.investmentNeeded)}</div></div>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {opt.plan.map((p, i) => (
+                                                <li key={p.key} className="flex items-center gap-3 bg-slate-950/40 border border-slate-800 rounded-xl p-3">
+                                                    <span className="w-6 h-6 rounded-full text-[11px] font-black flex items-center justify-center text-slate-950 shrink-0" style={{ background: p.color }}>{i + 1}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-semibold text-white truncate">{p.label}</div>
+                                                        <div className="text-[11px] text-slate-500">{p.note}</div>
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <div className="text-sm font-bold text-white tabular-nums">+{fmt(p.amount)}</div>
+                                                        <div className="text-[11px] text-emerald-300 font-semibold">ลดภาษี {fmt(p.saving)} ({Math.round((p.saving / p.amount) * 100)}%)</div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <button onClick={applyPlan} className="mt-4 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-colors">ลองเติมตามแผนนี้ลงในฟอร์ม</button>
+                                        <p className="text-[11px] text-slate-500 mt-2 text-center">ตัวเลขเป็นการจำลอง — ซื้อเท่าที่ไหวและตรงเป้าหมายการเงินของคุณ</p>
+                                    </>
+                                ) : (
+                                    <div className="text-sm font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
+                                        {calc.tax > 0 ? 'ใช้สิทธิลดหย่อนครบแล้ว หรือที่เหลือไม่ช่วยลดภาษีเพิ่ม 👏' : 'ไม่มีภาษีต้องจ่าย ไม่ต้องซื้อลดหย่อนเพิ่ม 🎉'}
+                                    </div>
+                                )}
+                            </div>
 
-                                            {showMaxSavingDetails && (
-                                                <div className="mt-4 sm:mt-5 space-y-2 sm:space-y-2.5 fade-in-up">
-                                                    <p className="text-[11px] sm:text-xs font-bold text-slate-400 mb-2 sm:mb-3 text-center uppercase tracking-widest">สิทธิลดหย่อนที่ยังว่างอยู่</p>
-                                                    {calculation.caps.life > 0 && (
-                                                        <div className="bg-white border border-slate-100 p-3 sm:p-4 rounded-xl flex justify-between items-center text-[14px] sm:text-[15px] shadow-sm">
-                                                            <span className="flex items-center text-slate-600 font-bold"><span className="w-2.5 h-2.5 rounded-full bg-blue-400 mr-2.5 sm:mr-3 shadow-sm"></span>ประกันชีวิต/สุขภาพ</span>
-                                                            <span className="font-black text-slate-800">{formatMoney(calculation.caps.life)}</span>
-                                                        </div>
-                                                    )}
-                                                    {calculation.caps.retire > 0 && (
-                                                        <div className="bg-white border border-slate-100 p-3 sm:p-4 rounded-xl flex justify-between items-center text-[14px] sm:text-[15px] shadow-sm">
-                                                            <span className="flex items-center text-slate-600 font-bold"><span className="w-2.5 h-2.5 rounded-full bg-teal-400 mr-2.5 sm:mr-3 shadow-sm"></span>เกษียณ (RMF/SSF/PVD)</span>
-                                                            <span className="font-black text-slate-800">{formatMoney(calculation.caps.retire)}</span>
-                                                        </div>
-                                                    )}
-                                                    {calculation.caps.tesg > 0 && (
-                                                        <div className="bg-white border border-slate-100 p-3 sm:p-4 rounded-xl flex justify-between items-center text-[14px] sm:text-[15px] shadow-sm">
-                                                            <span className="flex items-center text-slate-600 font-bold"><span className="w-2.5 h-2.5 rounded-full bg-orange-400 mr-2.5 sm:mr-3 shadow-sm"></span>กองทุน Thai ESG</span>
-                                                            <span className="font-black text-slate-800">{formatMoney(calculation.caps.tesg)}</span>
-                                                        </div>
-                                                    )}
+                            {/* Take-home */}
+                            <div className="glass rounded-3xl p-5 sm:p-6">
+                                <h3 className="font-bold text-white mb-3">เงินเหลือจริง (ประมาณการ)</h3>
+                                <div className="flex items-end justify-between">
+                                    <div>
+                                        <div className="text-3xl font-black text-white tabular-nums">{fmt(calc.takeHomeMonthly)}</div>
+                                        <div className="text-xs text-slate-400">บาท/เดือน หลังหักภาษี ประกันสังคม และ PVD</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-lg font-bold text-slate-200 tabular-nums">{fmt(calc.takeHome)}</div>
+                                        <div className="text-xs text-slate-500">บาท/ปี</div>
+                                    </div>
+                                </div>
+                                {calc.income.inc401 > 0 && calc.tax > 0 && (
+                                    <p className="text-xs text-slate-400 mt-3 bg-slate-950/40 border border-slate-800 rounded-xl p-3">
+                                        นายจ้างควรหักภาษี ณ ที่จ่ายเฉลี่ยราว <b className="text-white">{fmt((calc.tax * (calc.income.inc401 / calc.income.totalIncome)) / 12)}</b> บาท/เดือน (สัดส่วนของเงินเดือน)
+                                    </p>
+                                )}
+                                <button onClick={() => setModal('breakdown')} className="mt-4 w-full py-3 rounded-xl bg-white text-slate-900 font-bold text-sm hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                                    <IconDoc className="w-4 h-4" /> ดูรายละเอียดการคำนวณทีละขั้น
+                                </button>
+                            </div>
+                        </aside>
+                    </div>
+
+                    {/* Saved plans & comparison */}
+                    <section className="glass rounded-3xl p-5 sm:p-7">
+                        <h2 className="font-bold text-white text-lg flex items-center gap-2 mb-4"><IconSave className="w-5 h-5 text-indigo-300" /> บันทึกและเปรียบเทียบแผน <span className="text-xs text-slate-500 font-medium">(เก็บในเครื่องนี้)</span></h2>
+                        <form onSubmit={savePlan} className="flex flex-col sm:flex-row gap-3">
+                            <input type="text" value={planName} onChange={(e) => setPlanName(e.target.value)} placeholder="ตั้งชื่อแผน เช่น 'ซื้อ RMF เพิ่ม 50k'" className="field flex-1 rounded-xl py-3 px-4 font-semibold" />
+                            <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold transition-colors">บันทึกแผน</button>
+                        </form>
+                        {planCalcs.length > 0 && (
+                            <div className="mt-5 overflow-x-auto -mx-5 sm:mx-0">
+                                <table className="w-full min-w-[640px] text-sm">
+                                    <thead>
+                                        <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                                            <th className="py-2.5 px-5 sm:px-3">แผน</th><th className="py-2.5 px-3">ปีภาษี</th><th className="py-2.5 px-3 text-right">รายได้</th><th className="py-2.5 px-3 text-right">ภาษี</th><th className="py-2.5 px-3 text-right">อัตราเฉลี่ย</th><th className="py-2.5 px-3 text-right">คืน / จ่ายเพิ่ม</th><th className="py-2.5 px-3"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(() => {
+                                            const minTax = Math.min(...planCalcs.map((x) => x.c.tax));
+                                            return planCalcs.map(({ plan, c }) => (
+                                                <tr key={plan.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+                                                    <td className="py-3 px-5 sm:px-3 font-semibold text-white max-w-[200px] truncate">{plan.name} {c.tax === minTax && planCalcs.length > 1 && <Pill tone="emerald">ภาษีต่ำสุด</Pill>}</td>
+                                                    <td className="py-3 px-3 text-slate-400">{c.year}</td>
+                                                    <td className="py-3 px-3 text-right tabular-nums">{fmt(c.income.totalIncome)}</td>
+                                                    <td className="py-3 px-3 text-right tabular-nums font-bold text-white">{fmt(c.tax)}</td>
+                                                    <td className="py-3 px-3 text-right tabular-nums">{pct(c.effectiveRate)}</td>
+                                                    <td className={`py-3 px-3 text-right tabular-nums font-bold ${c.isRefund ? 'text-emerald-300' : 'text-rose-300'}`}>{c.isRefund ? '+' : '-'}{fmt(Math.abs(c.balance))}</td>
+                                                    <td className="py-3 px-3 text-right whitespace-nowrap">
+                                                        <button onClick={() => loadPlan(plan)} className="text-xs font-bold text-indigo-300 hover:text-white bg-indigo-500/15 px-3 py-1.5 rounded-lg mr-1">เรียกดู</button>
+                                                        <button onClick={() => deletePlan(plan)} aria-label={`ลบแผน ${plan.name}`} className="text-slate-500 hover:text-rose-300 p-1.5 align-middle"><IconTrash className="w-4 h-4" /></button>
+                                                    </td>
+                                                </tr>
+                                            ));
+                                        })()}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Knowledge */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+                        <section className="glass rounded-3xl p-5 sm:p-6">
+                            <h3 className="font-bold text-white flex items-center gap-2 mb-4"><IconCalendar className="w-5 h-5 text-sky-300" /> ปฏิทินภาษี</h3>
+                            <ol className="space-y-4 relative border-l border-slate-700 ml-2">
+                                {CALENDAR.map((c) => (
+                                    <li key={c.when} className="pl-4 relative">
+                                        <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-sky-400" />
+                                        <div className="text-[11px] font-bold text-sky-300">{c.when}</div>
+                                        <div className="text-sm font-semibold text-white">{c.what}</div>
+                                        <div className="text-xs text-slate-400">{c.sub}</div>
+                                    </li>
+                                ))}
+                            </ol>
+                        </section>
+                        <section className="glass rounded-3xl p-5 sm:p-6">
+                            <h3 className="font-bold text-white flex items-center gap-2 mb-4"><IconAlert className="w-5 h-5 text-amber-300" /> เงื่อนไขที่ต้องรู้ก่อนซื้อ</h3>
+                            <ul className="space-y-3">
+                                {RULES_INFO.map((r) => (
+                                    <li key={r.name} className="text-sm"><b className="text-amber-200">{r.name}</b> <span className="text-slate-400">— {r.text}</span></li>
+                                ))}
+                            </ul>
+                        </section>
+                        <section className="glass rounded-3xl p-5 sm:p-6">
+                            <h3 className="font-bold text-white flex items-center gap-2 mb-4"><IconCheck className="w-5 h-5 text-emerald-300" /> เอกสารที่ต้องเตรียม</h3>
+                            <ul className="space-y-2.5">
+                                {DOCS.map((d) => (
+                                    <li key={d} className="flex gap-2.5 text-sm text-slate-300"><span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />{d}</li>
+                                ))}
+                            </ul>
+                        </section>
+                    </div>
+
+                    <p className="text-center text-[11.5px] text-slate-500 leading-relaxed max-w-3xl mx-auto">
+                        เครื่องมือนี้ใช้เพื่อการวางแผนเบื้องต้น อ้างอิงหลักเกณฑ์กรมสรรพากรตามข้อมูลล่าสุดที่รวบรวมได้ — เพดานบางรายการ (เช่น มาตรการกระตุ้นเศรษฐกิจ, ThaiESGX) เปลี่ยนตามประกาศแต่ละปี ควรตรวจสอบกับ rd.go.th ก่อนยื่นจริง
+                        · ข้อมูลทั้งหมดเก็บอยู่ในเบราว์เซอร์ของคุณเท่านั้น
+                    </p>
+
+                    {/* ===== Modals ===== */}
+                    {modal === 'clear' && (
+                        <Modal onClose={() => setModal(null)}>
+                            <h3 className="text-xl font-bold text-white text-center mb-2">ล้างข้อมูลในฟอร์ม?</h3>
+                            <p className="text-sm text-slate-400 text-center mb-6">แผนที่บันทึกไว้จะไม่หายไป</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setModal(null)} className="flex-1 py-3 rounded-xl bg-slate-800 text-slate-200 font-bold">ยกเลิก</button>
+                                <button onClick={clearForm} className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold">ล้างข้อมูล</button>
+                            </div>
+                        </Modal>
+                    )}
+                    {modal && modal.preset && (
+                        <Modal onClose={() => setModal(null)}>
+                            <h3 className="text-xl font-bold text-white text-center mb-2">โหลด {PRESETS[modal.preset].label}?</h3>
+                            <p className="text-sm text-slate-400 text-center mb-6">ข้อมูลในฟอร์มตอนนี้จะถูกแทนที่ทั้งหมด</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setModal(null)} className="flex-1 py-3 rounded-xl bg-slate-800 text-slate-200 font-bold">ยกเลิก</button>
+                                <button onClick={() => applyPreset(modal.preset)} className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold">โหลดเลย</button>
+                            </div>
+                        </Modal>
+                    )}
+                    {modal === 'breakdown' && (
+                        <Modal wide onClose={() => setModal(null)}>
+                            <button onClick={() => setModal(null)} aria-label="ปิด" className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"><IconX className="w-5 h-5" /></button>
+                            <h3 className="text-xl sm:text-2xl font-bold text-white mb-6 pr-10">รายละเอียดการคำนวณ · {R.label}</h3>
+                            <div className="space-y-4 text-sm">
+                                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-2">
+                                    <div className="flex justify-between font-bold text-white"><span>1. เงินได้พึงประเมิน</span><span>{fmt(calc.income.totalIncome)}</span></div>
+                                    {[['40(1) เงินเดือน+โบนัส', calc.income.inc401], ['40(2) ฟรีแลนซ์', calc.income.inc402], ['40(5) ค่าเช่า', calc.income.inc405], ['40(8) ธุรกิจ', calc.income.inc408]].filter(([, v]) => v > 0).map(([l, v]) => (
+                                        <div key={l} className="flex justify-between text-slate-400 pl-3"><span>{l}</span><span>{fmt(v)}</span></div>
+                                    ))}
+                                    <div className="flex justify-between font-bold text-rose-300 pt-2"><span>2. หักค่าใช้จ่าย</span><span>-{fmt(calc.expenses.total)}</span></div>
+                                    {[['40(1)+40(2) เหมา 50% (≤100,000)', calc.expenses.exp401_402], ['40(5) เหมา 30%', calc.expenses.exp405], ['40(8) เหมา 60%', calc.expenses.exp408]].filter(([, v]) => v > 0).map(([l, v]) => (
+                                        <div key={l} className="flex justify-between text-slate-400 pl-3"><span>{l}</span><span>-{fmt(v)}</span></div>
+                                    ))}
+                                </div>
+                                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-2">
+                                    <div className="font-bold text-white">3. หักค่าลดหย่อน</div>
+                                    {calc.allowanceItems.map((i) => (
+                                        <div key={i.key} className="flex justify-between text-slate-400 pl-3"><span>{i.label}</span><span className="text-emerald-300">-{fmt(i.amount)}</span></div>
+                                    ))}
+                                    <div className="flex justify-between font-bold text-emerald-300 border-t border-slate-800 pt-2"><span>รวมค่าลดหย่อน</span><span>-{fmt(calc.allowances)}</span></div>
+                                </div>
+                                <div className="bg-indigo-500/10 border border-indigo-400/20 rounded-2xl p-4 sm:p-5 flex justify-between items-center">
+                                    <span className="font-bold text-indigo-100">4. เงินได้สุทธิ</span>
+                                    <span className="text-2xl font-black text-indigo-200">{fmt(calc.netIncome)}</span>
+                                </div>
+                                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 sm:p-5">
+                                    <div className="font-bold text-white mb-3">5. คำนวณตามขั้นบันได</div>
+                                    <div className="space-y-2">
+                                        {calc.brackets.map((b, i) => {
+                                            const span = Number.isFinite(b.max) ? b.max - b.min : 5000000;
+                                            return (
+                                                <div key={i} className={`grid grid-cols-[3rem_1fr_6rem] gap-3 items-center ${b.taxable > 0 ? '' : 'opacity-35'}`}>
+                                                    <span className="font-black" style={{ color: RATE_COLORS[i] }}>{b.rate}%</span>
+                                                    <div>
+                                                        <div className="text-[11px] text-slate-500">{fmt(b.min)} – {Number.isFinite(b.max) ? fmt(b.max) : 'ขึ้นไป'}</div>
+                                                        <div className="h-2 rounded-full bg-slate-800 overflow-hidden mt-1"><div className="h-full rounded-full" style={{ width: `${Math.min(100, (b.taxable / span) * 100)}%`, background: RATE_COLORS[i] }} /></div>
+                                                    </div>
+                                                    <span className="text-right font-bold text-white tabular-nums">{fmt(b.tax)}</span>
                                                 </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="text-[14px] sm:text-[15px] font-extrabold text-emerald-600 bg-emerald-50/80 p-4 sm:p-5 rounded-xl sm:rounded-2xl text-center border border-emerald-100/50 shadow-sm">
-                                            ยอดเยี่ยมมาก! 👏 คุณบริหารภาษีได้ถึงจุดต่ำสุดแล้ว
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-5 space-y-2">
+                                    {calc.income.otherIncome >= 120000 && (
+                                        <div className={`text-xs ${calc.minTaxApplied ? 'text-amber-300' : 'text-slate-400'}`}>
+                                            เทียบภาษีขั้นต่ำ ม.48(2): 0.5% x {fmt(calc.income.otherIncome)} = {fmt(calc.minimumTax)} {calc.minTaxApplied ? '→ สูงกว่าวิธีขั้นบันได ใช้ยอดนี้' : calc.minimumTax <= 5000 ? '→ ไม่เกิน 5,000 ได้รับยกเว้น' : '→ ต่ำกว่าวิธีขั้นบันได ใช้วิธีปกติ'}
                                         </div>
                                     )}
-                                </div>
-                            </CleanCard>
-
-                        </div>
-                    </div>
-
-                    {}
-                    {/* Breakdown Modal */}
-                    {showBreakdown && (
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-end sm:items-center justify-center sm:p-6 fade-in-up">
-                            <div className="bg-white rounded-t-[2rem] sm:rounded-t-[2.5rem] sm:rounded-[2.5rem] p-5 sm:p-6 md:p-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative border border-white/20">
-                                <button onClick={() => setShowBreakdown(false)} className="absolute top-4 sm:top-6 right-4 sm:right-6 p-2 sm:p-2.5 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-all">
-                                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                                
-                                <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 mb-6 sm:mb-8 flex items-center pr-10">
-                                    <div className="bg-indigo-100 p-2 sm:p-3 rounded-xl sm:rounded-2xl text-indigo-600 mr-3 sm:mr-4 shadow-inner flex-shrink-0"><svg className="w-5 h-5 sm:w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-                                    รายละเอียดการคำนวณภาษี
-                                </h3>
-
-                                <div className="space-y-6">
-                                    {/* Step 1 & 2 */}
-                                    <div className="bg-slate-50/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/60 shadow-sm">
-                                        <div className="flex justify-between font-extrabold text-slate-800 mb-3 sm:mb-4 text-sm sm:text-base">
-                                            <span>1. เงินได้พึงประเมินทั้งหมด</span>
-                                            <span>{formatMoney(calculation.totalIncome)}</span>
-                                        </div>
-                                        <div className="flex justify-between font-extrabold text-rose-500 text-[14px] sm:text-[15px] mb-2">
-                                            <span>2. หัก ค่าใช้จ่ายตามประเภทรายได้</span>
-                                            <span>-{formatMoney(calculation.breakdown.expenses)}</span>
-                                        </div>
-                                        <div className="text-xs sm:text-sm text-slate-500 ml-4 font-semibold">
-                                            ↳ {calculation.breakdown.expenseBreakdownStr}
-                                        </div>
-                                    </div>
-
-                                    {/* Step 3: Allowances */}
-                                    <div className="bg-slate-50/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/60 shadow-sm">
-                                        <div className="font-extrabold text-slate-800 mb-4 sm:mb-5 text-sm sm:text-base">3. หัก ค่าลดหย่อนต่างๆ</div>
-                                        <div className="space-y-2.5 sm:space-y-3 text-[14px] sm:text-[15px] text-slate-600 ml-1 sm:ml-3">
-                                            {calculation.breakdown.personalAllowance > 0 && <div className="flex justify-between font-medium"><span>- ลดหย่อนส่วนตัว/สมรส</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.personalAllowance)}</span></div>}
-                                            {calculation.breakdown.familyAllowance > 0 && <div className="flex justify-between font-medium"><span>- บุตรและบิดามารดา</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.familyAllowance)}</span></div>}
-                                            {calculation.breakdown.socialSec > 0 && <div className="flex justify-between font-medium"><span>- ประกันสังคม</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.socialSec)}</span></div>}
-                                            {calculation.breakdown.genLifeUsed > 0 && <div className="flex justify-between font-medium"><span>- ประกันชีวิต/สุขภาพ</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.genLifeUsed)}</span></div>}
-                                            {calculation.breakdown.retireGroup > 0 && <div className="flex justify-between font-medium"><span>- กลุ่มเกษียณ (PVD/SSF/RMF/บำนาญ)</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.retireGroup)}</span></div>}
-                                            {calculation.breakdown.tesgActual > 0 && <div className="flex justify-between font-medium"><span>- กองทุน Thai ESG</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.tesgActual)}</span></div>}
-                                            {calculation.breakdown.realEstateStimulus > 0 && <div className="flex justify-between font-medium"><span>- ดอกเบี้ยบ้าน / มาตรการรัฐ</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.realEstateStimulus)}</span></div>}
-                                            {calculation.breakdown.doubleDon > 0 && <div className="flex justify-between font-medium"><span>- บริจาคการศึกษา/รพ. (x2)</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.doubleDon)}</span></div>}
-                                            {calculation.breakdown.genDon > 0 && <div className="flex justify-between font-medium"><span>- บริจาคทั่วไป</span><span className="font-bold text-rose-500">-{formatMoney(calculation.breakdown.genDon)}</span></div>}
-                                        </div>
-                                        <div className="flex justify-between font-extrabold text-slate-800 mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-200 text-sm sm:text-base">
-                                            <span>รวมค่าลดหย่อนทั้งหมด</span>
-                                            <span className="text-rose-500">-{formatMoney(calculation.totalAllowances)}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Step 4: Net Income */}
-                                    <div className="bg-indigo-50/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-indigo-100 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                                        <span className="font-extrabold text-indigo-950 text-sm sm:text-base mb-2 sm:mb-0">4. เงินได้สุทธิ (คำนวณภาษี)</span>
-                                        <span className="font-black text-2xl sm:text-3xl text-indigo-600">{formatMoney(calculation.netIncome)}</span>
-                                    </div>
-
-                                    {/* Step 5: Tax Bracket Table & Bar Chart */}
-                                    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 overflow-hidden shadow-sm">
-                                        <div className="bg-slate-50 p-4 sm:p-5 font-extrabold text-slate-800 text-sm sm:text-base border-b border-slate-100">
-                                            5. คำนวณภาษีตามขั้นบันได
-                                        </div>
-                                        
-                                        <div className="px-3 sm:px-5">
-                                            <TaxBracketBarChart bracketDetails={calculation.breakdown.bracketDetails} />
-                                        </div>
-
-                                        <div className="p-0 overflow-x-auto border-t border-slate-100">
-                                            <table className="w-full text-[13px] sm:text-[14px] text-left text-slate-600 min-w-[400px]">
-                                                <thead className="bg-slate-50 text-[11px] sm:text-[12px] uppercase tracking-wider border-b border-slate-200 font-extrabold text-slate-500">
-                                                    <tr>
-                                                        <th className="px-4 py-3 sm:py-4 text-center w-24">อัตรา</th>
-                                                        <th className="px-4 py-3 sm:py-4">ขั้นเงินได้สุทธิ (บาท)</th>
-                                                        <th className="px-4 py-3 sm:py-4 text-right">ภาษีในขั้น</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {calculation.breakdown.bracketDetails.length > 0 ? calculation.breakdown.bracketDetails.map((b, idx) => (
-                                                        <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
-                                                            <td className="px-4 py-3 sm:py-4 text-center font-black text-slate-700 bg-slate-50/30">{b.rate}%</td>
-                                                            <td className="px-4 py-3 sm:py-4 font-semibold">{b.label}</td>
-                                                            <td className={`px-4 py-3 sm:py-4 text-right font-bold ${b.rate > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{formatMoney(b.tax)}</td>
-                                                        </tr>
-                                                    )) : (
-                                                        <tr><td colSpan="3" className="px-4 py-6 text-center text-slate-400 font-semibold">ไม่มีภาษีที่ต้องเสีย</td></tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    {/* Step 6: Final Calculation */}
-                                    <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden mt-6 sm:mt-8">
-                                        <div className="absolute top-0 right-0 w-32 h-32 sm:w-48 sm:h-48 bg-indigo-500/20 blur-[40px] sm:blur-[50px] rounded-full"></div>
-                                        <div className="relative z-10 space-y-3 sm:space-y-4">
-                                            {calculation.breakdown.minTaxApplied && (
-                                                <div className="text-amber-300 text-xs sm:text-sm font-semibold leading-relaxed">
-                                                    ⚠️ ใช้ภาษีขั้นต่ำ 0.5% ของเงินได้นอกจาก 40(1) ({formatMoney(calculation.breakdown.minimumTax)}) เพราะสูงกว่าภาษีอัตราก้าวหน้า ({formatMoney(calculation.breakdown.progressiveTax)}) ตาม ม.48(2)
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between text-white/80 font-bold text-sm sm:text-base">
-                                                <span>ภาษีที่คำนวณได้รวมทั้งสิ้น</span>
-                                                <span>{formatMoney(calculation.tax)}</span>
-                                            </div>
-                                            <div className="flex justify-between text-indigo-300 font-bold text-sm sm:text-base border-b border-white/10 pb-4 sm:pb-5">
-                                                <span>หัก ภาษีนำส่งแล้ว (ณ ที่จ่าย)</span>
-                                                <span>-{formatMoney(calculation.breakdown.wht)}</span>
-                                            </div>
-                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-white pt-3 sm:pt-4">
-                                                <span className="font-extrabold text-base sm:text-lg mb-1.5 sm:mb-0">{calculation.tax - calculation.breakdown.wht < 0 ? '🎉 ยินดีด้วย คุณได้เงินคืน' : '⚠️ ภาษีสุทธิที่ต้องชำระเพิ่ม'}</span>
-                                                <span className={`font-black text-3xl sm:text-4xl ${calculation.tax - calculation.breakdown.wht < 0 ? 'text-emerald-400' : 'text-amber-400'}`}>{formatMoney(Math.abs(calculation.tax - calculation.breakdown.wht))}</span>
-                                            </div>
-                                        </div>
+                                    <div className="flex justify-between text-slate-300 font-semibold"><span>ภาษีที่ต้องเสีย</span><span>{fmt(calc.tax)}</span></div>
+                                    <div className="flex justify-between text-sky-300 font-semibold"><span>หัก ภาษี ณ ที่จ่าย</span><span>-{fmt(calc.wht)}</span></div>
+                                    <div className="flex justify-between items-center border-t border-slate-700 pt-3">
+                                        <span className="font-bold text-white">{calc.isRefund ? '🎉 ได้เงินคืน' : '⚠️ ต้องชำระเพิ่ม'}</span>
+                                        <span className={`text-3xl font-black ${calc.isRefund ? 'text-emerald-300' : 'text-amber-300'}`}>{fmt(Math.abs(calc.balance))}</span>
                                     </div>
                                 </div>
-                                
-                                <button onClick={() => setShowBreakdown(false)} className="mt-6 sm:mt-10 w-full py-3.5 sm:py-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl sm:rounded-2xl font-black text-base sm:text-lg transition-all">
-                                    ปิดหน้าต่าง
-                                </button>
                             </div>
-                        </div>
+                        </Modal>
                     )}
 
-                    {/* Mobile Floating Action Bar (Sticky Bottom) */}
-                    <div className="xl:hidden fixed bottom-4 left-4 right-4 z-40 fade-in-up pointer-events-none">
-                        <div className="premium-glass-card rounded-2xl p-4 flex items-center justify-between shadow-[0_10px_40px_rgba(0,0,0,0.15)] pointer-events-auto border-indigo-500/20 bg-white/95 backdrop-blur-xl">
-                            <div className="flex flex-col">
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-0.5">{calculation.isRefund ? 'ได้รับเงินคืน' : 'ยอดภาษีสุทธิ'}</span>
-                                <span className={`text-xl font-black leading-none ${calculation.isRefund ? 'text-emerald-500' : (calculation.taxDifference > 0 ? 'text-rose-500' : 'text-slate-800')}`}>
-                                    {formatMoney(calculation.taxDifference)} <span className="text-xs font-bold text-slate-400">บาท</span>
-                                </span>
+                    {/* Mobile bottom bar */}
+                    <div className="xl:hidden fixed bottom-3 left-3 right-3 z-40">
+                        <div className="glass !bg-slate-900/90 rounded-2xl p-3.5 flex items-center justify-between">
+                            <div>
+                                <div className="text-[11px] text-slate-400 font-semibold">{heroLabel}</div>
+                                <div className={`text-xl font-black tabular-nums ${tone === 'refund' ? 'text-emerald-300' : tone === 'pay' ? 'text-rose-300' : 'text-white'}`}>{fmt(Math.abs(calc.balance))} <span className="text-xs text-slate-500">บาท</span></div>
                             </div>
-                            <button 
-                                onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })} 
-                                className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-md hover:bg-slate-800 active:scale-95 transition-all"
-                            >
-                                ดูสรุปผล
-                            </button>
+                            <button onClick={() => document.getElementById('results').scrollIntoView({ behavior: 'smooth' })} className="bg-white text-slate-900 px-4 py-2.5 rounded-xl text-sm font-bold">ดูผล 3D</button>
                         </div>
                     </div>
-
                 </div>
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ErrorBoundary><App /></ErrorBoundary>);
+        ReactDOM.createRoot(document.getElementById('root')).render(<ErrorBoundary><App /></ErrorBoundary>);
     </script>
 </body>
 </html>
